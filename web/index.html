@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>VERSE2 — AI Music Video Director</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">▶</span>
+      <span class="name">VERSE2</span>
+      <span class="tag">Music Video Creative Director</span>
+    </div>
+    <a class="link" href="/asp.json" target="_blank">ASP manifest</a>
+  </header>
+
+  <main id="main">
+    <!-- STEP 1: audio -->
+    <section class="step" id="step-1">
+      <h1>Drop a track. Get a full music video treatment in 60 seconds.</h1>
+      <p class="lede">VERSE2 listens to your song, breaks it into sections, and produces a cinematic treatment with a scene-by-scene shot list and a budget that fits.</p>
+      <form id="form-audio" class="card">
+        <label class="field">
+          <span>Audio URL <small>(mp3 / wav / m4a / flac, ≤ 60MB)</small></span>
+          <input id="audio-url" type="url" required placeholder="https://example.com/your-track.mp3" />
+        </label>
+        <button type="submit" class="primary">Continue</button>
+      </form>
+    </section>
+
+    <!-- STEP 2: interview -->
+    <section class="step hidden" id="step-2">
+      <h2>Tell us about the track</h2>
+      <form id="form-interview" class="card grid">
+        <label class="field">
+          <span>Track title</span>
+          <input id="i-title" placeholder="Lagos Sunrise" />
+        </label>
+        <label class="field">
+          <span>Artist</span>
+          <input id="i-artist" placeholder="Tunde" />
+        </label>
+        <label class="field">
+          <span>Genre</span>
+          <input id="i-genre" placeholder="afrobeats, hip-hop, ballad..." />
+        </label>
+        <label class="field">
+          <span>Currency</span>
+          <select id="i-currency">
+            <option>USD</option><option>NGN</option><option>EUR</option><option>GBP</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Budget cap <small>(optional)</small></span>
+          <input id="i-budget" type="number" min="0" placeholder="e.g. 5000000 for 5M NGN" />
+        </label>
+        <label class="field full">
+          <span>Visual mood</span>
+          <input id="i-mood" placeholder="Lagos at dawn, anamorphic flares, warm grain" />
+        </label>
+        <label class="field full">
+          <span>Reference artists / videos</span>
+          <input id="i-refs" placeholder="Burna Boy, Dave Free, the LUTZ video aesthetic" />
+        </label>
+        <label class="field full">
+          <span>Must-haves</span>
+          <textarea id="i-must" rows="2" placeholder="drone shot of the third mainland bridge..."></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="ghost" id="back-1">Back</button>
+          <button type="submit" class="primary">Generate package</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- STEP 3: loading -->
+    <section class="step hidden" id="step-3">
+      <div class="loader">
+        <div class="pulse"></div>
+        <h2 id="loading-msg">Listening to your track…</h2>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <p class="meta" id="loading-detail">Audio analysis · 0 of 4 stages</p>
+      </div>
+    </section>
+
+    <!-- STEP 4: results -->
+    <section class="step hidden" id="step-4">
+      <div class="results-head">
+        <div>
+          <h2 id="r-title">Treatment</h2>
+          <p class="meta" id="r-meta"></p>
+        </div>
+        <div class="downloads">
+          <a class="btn" id="dl-pdf" target="_blank" download>Treatment PDF</a>
+          <a class="btn" id="dl-html" target="_blank" download>HTML</a>
+          <a class="btn" id="dl-shots" target="_blank" download>Shot list CSV</a>
+          <a class="btn" id="dl-sched" target="_blank" download>Schedule CSV</a>
+        </div>
+      </div>
+
+      <div class="concepts" id="concepts"></div>
+
+      <div class="cost card">
+        <h3>Budget</h3>
+        <table>
+          <thead><tr><th>Category</th><th>Description</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
+          <tbody id="cost-lines"></tbody>
+          <tfoot>
+            <tr><td colspan="4">Subtotal</td><td id="cost-subtotal"></td></tr>
+            <tr><td colspan="4">Misc</td><td id="cost-misc"></td></tr>
+            <tr class="totals"><td colspan="4">Total</td><td id="cost-total"></td></tr>
+          </tfoot>
+        </table>
+        <p class="meta" id="budget-status"></p>
+      </div>
+
+      <div class="actions">
+        <button class="ghost" id="back-2">Start over</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>VERSE2 · An OKX.AI ASP · pay-per-call via x402 on X Layer</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

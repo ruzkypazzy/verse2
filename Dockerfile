@@ -9,7 +9,7 @@ COPY package.json package-lock.json* ./
 RUN npm install --no-audit --no-fund
 
 FROM node:20-bookworm-slim AS python-deps
-WORK /tmp
+WORKDIR /tmp
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-venv python3-pip build-essential libsndfile1 \
     && rm -rf /var/lib/apt/lists/*

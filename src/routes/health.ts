@@ -60,6 +60,28 @@ healthRouter.get("/health", async (_req: Request, res: Response) => {
   });
 });
 
+// Debug endpoint: shows which env vars Railway actually injected.
+healthRouter.get("/debug-env", (_req: Request, res: Response) => {
+  const keys = Object.keys(process.env).sort();
+  res.json({
+    total_count: keys.length,
+    has_openai: 'OPENAI_API_KEY' in process.env,
+    openai_len: (process.env.OPENAI_API_KEY ?? '').length,
+    has_receiving_wallet: 'RECEIVING_WALLET_ADDRESS' in process.env,
+    receiving_wallet_len: (process.env.RECEIVING_WALLET_ADDRESS ?? '').length,
+    has_x402: 'X402_ASSET' in process.env,
+    interesting_keys: keys.filter((k) =>
+      ['OPENAI_API_KEY','OPENAI_BASE_URL','OPENAI_MODEL','RECEIVING_WALLET_ADDRESS',
+       'X402_ASSET','X402_NETWORK','PUBLIC_BASE_URL','PORT','HOST'].includes(k)),
+    all_relevant_present: {
+      OPENAI_API_KEY: 'OPENAI_API_KEY' in process.env,
+      RECEIVING_WALLET_ADDRESS: 'RECEIVING_WALLET_ADDRESS' in process.env,
+      X402_ASSET: 'X402_ASSET' in process.env,
+    },
+  });
+});
+});
+
 healthRouter.get("/", (_req: Request, res: Response) => {
   res.json({
     name: "VERSE2",

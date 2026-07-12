@@ -94,7 +94,9 @@ healthRouter.get("/asp.json", (_req: Request, res: Response) => {
     },
     payment: {
       protocol: "x402",
-      network: "x-layer-testnet",
+      network: "eip155:196",
+      asset: "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+      asset_name: "USDT0",
       pay_to: env.receivingWallet,
     },
     endpoints: {

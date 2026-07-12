@@ -8,3 +8,5 @@ testdata/
 __pycache__/
 *.pyc
 .venv/
+.venv-demo/
+.venv/

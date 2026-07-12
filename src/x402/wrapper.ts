@@ -29,19 +29,27 @@ export function x402Gate(opts: X402Options) {
     const isPaid = payment && payment.length > 0;
 
     if (!isPaid) {
-      // Build a minimal v2 PAYMENT-REQUIRED header.
+      // Build a v2 PAYMENT-REQUIRED challenge that matches the OKX.AI spec:
+      // https://web3.okx.com/onchainos/dev-docs/okxai/howtomcp
       const challenge = {
         x402Version: 2,
+        resource: {
+          url: `${process.env.PUBLIC_BASE_URL ?? ""}${opts.resource}`,
+          description: opts.description ?? `VERSE2 ${opts.resource}`,
+          mimeType: "application/json",
+        },
         accepts: [
           {
             scheme: "exact",
-            network: "x-layer-testnet",
-            maxAmountRequired: String(Math.round(opts.priceUSDT * 1_000_000)), // 6 decimals
-            resource: opts.resource,
-            description: opts.description ?? `VERSE2 ${opts.resource}`,
+            // CAIP-2 network ID; 196 = X Layer mainnet. Testnet uses 195.
+            network: process.env.X402_NETWORK ?? "eip155:196",
+            // Official USDT0 settlement contract on X Layer (per OKX docs).
+            asset: process.env.X402_ASSET ?? "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+            // Min units; 6 decimals; 2_000_000 = 2 USDT0
+            amount: String(Math.round(opts.priceUSDT * 1_000_000)),
             payTo: opts.payTo,
-            mimeType: "application/json",
-            extra: { name: "USDT0" },
+            maxTimeoutSeconds: 300,
+            extra: { name: "USD\u20ae0", version: "1" },
           },
         ],
       };

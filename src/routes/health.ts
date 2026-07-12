@@ -85,15 +85,29 @@ healthRouter.get("/debug-env", (_req: Request, res: Response) => {
 // and live testing. 30 seconds, 22050 Hz mono.
 import { createReadStream } from "node:fs";
 healthRouter.get("/demo-track.wav", (_req: Request, res: Response) => {
-  const path = resolve(__dirname, "../../demo-track.wav");
-  if (!existsSync(path)) {
-    res.status(404).json({ error: "demo track not bundled" });
+  // Path resolution: the dist/routes/health.js file ends up at /app/dist/routes/.
+  // The demo track is at /app/demo-track.wav (per Dockerfile COPY).
+  const candidates = [
+    resolve(__dirname, "../../demo-track.wav"),  // /app/demo-track.wav from /app/dist/routes
+    resolve(__dirname, "../demo-track.wav"),      // /app/dist/demo-track.wav
+    resolve(__dirname, "../../../demo-track.wav"), // one level up
+    resolve("/app/demo-track.wav"),
+    resolve(process.cwd(), "demo-track.wav"),
+  ];
+  const found = candidates.find((p) => existsSync(p));
+  if (!found) {
+    res.status(404).json({
+      error: "demo track not bundled",
+      cwd: process.cwd(),
+      dirname: __dirname,
+      tried: candidates,
+    });
     return;
   }
   res.setHeader("Content-Type", "audio/wav");
-  res.setHeader("Content-Length", String(statSync(path).size));
+  res.setHeader("Content-Length", String(statSync(found).size));
   res.setHeader("Cache-Control", "public, max-age=86400");
-  createReadStream(path).pipe(res);
+  createReadStream(found).pipe(res);
 });
 
 healthRouter.get("/", (_req: Request, res: Response) => {

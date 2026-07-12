@@ -14,8 +14,11 @@ VERSE2 — Music Video Creative Director
 
 ## Agent ID *
 
-`[NEEDS-AGENT-ID]`
-*Get this from OKX.AI after submitting the A2MCP registration. Format: `asp_xxx...` or similar. Fill in once you have it.*
+```
+5212
+```
+
+*Obtained from OKX.AI after A2MCP registration on 2026-07-12. Listing status: under review (approvalLabel = "Listing under review", approvalRemark = "AI quality review suggested pass").*
 
 ## ASP Description *
 
@@ -31,23 +34,35 @@ What it does:
 - Returns: treatment.pdf + treatment.html + shot_list.csv + shooting_schedule.csv
 
 How it's paid:
-x402 v2 protocol on x-layer-testnet. 2 USDT0 per package, 0.3 USDT0 per revision. Standard pay-per-call A2MCP model.
+x402 v2 protocol on X Layer mainnet (eip155:196). 2 USDT0 per package, 0.3 USDT0 per revision. Standard pay-per-call A2MCP model.
 
 How it was built:
-- Python sidecar (FastAPI + librosa) for audio analysis — Laplacian segmentation with McFee/Ellis-style spectral clustering
+- Python sidecar (FastAPI + librosa) for audio analysis — Laplacian segmentation with novelty-based structural clustering
 - Node 20 + TypeScript orchestrator on Express
-- better-sqlite3 for job persistence
+- better-sqlite3 for job persistence with WAL mode
 - Puppeteer for HTML→PDF rendering of the treatment
 - OpenAI-compatible LLM (works with OpenAI, FreeModel.dev, or any /v1/chat/completions endpoint)
-- Single Docker image, deploys in 3 minutes
+- Single Docker image with both the Node API and Python sidecar, deploys in 3 minutes
+- Live on Railway at https://outstanding-determination-production-06de.up.railway.app
+
+Real example output (run on 2026-07-12 against a synthetic 30s afrobeats track):
+- 3 distinct concepts: "Neon Dreams", "Afro Urban Flow", "Cultural Pulse"
+- 9 timestamped shots across intro/verse/chorus
+- 3-day shooting schedule at 3 Lagos locations
+- Total cost: $23,320 (under $50k cap)
+- Full treatment.html with cinematic visual style, pacing notes, scene-by-scene shot list, and budget breakdown
 
 What it does NOT do:
 - No custodial wallet ops — read-only audio analysis + LLM prose + cost math
 - No token launches, no trading, no portfolio advice
 - No real-time music generation or voice cloning
+- No human film crew sourcing — VERSE2 produces the blueprint, not the shoot
 
 Why it matters:
 Most independent musicians can't afford a creative director. Existing AI video tools need a finished script. VERSE2 goes from raw audio to a complete production blueprint, anchored to the actual song structure, with a budget that auto-fits the artist's cap. The agent's value compounds with each revision — the system remembers the project, the user refines the direction.
+
+Track: Artistic Excellence
+Categories also qualifying: Best Product, Revenue Rocket (priced per call in USDT0)
 ```
 
 ## ASP Type *
@@ -65,8 +80,11 @@ A2MCP
 
 ## X Participation Post (Link) *
 
-`[NEEDS-X-POST-URL]`
-*Paste the URL of the X post containing the demo video, the #OKXAI tag, and a brief intro to the ASP. Post this AFTER the OKX.AI listing is approved so the link is live. Format: `https://x.com/ruzkypazzy/status/1234567890`*
+```
+https://x.com/ruzkypazzy/status/TBD
+```
+
+*Replace TBD with the live post URL after publishing from @ruzkypazzy.*
 
 ## Telegram Handle *
 

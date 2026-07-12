@@ -2,6 +2,7 @@ import { config as loadDotenv } from "dotenv";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { getOpenaiKey, getOpenaiBaseUrl, getOpenaiModel } from "./secrets.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const envFilePath = resolve(__dirname, "../../.env");
@@ -33,9 +34,12 @@ export const env = {
   host: process.env.HOST ?? "0.0.0.0",
   publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "http://localhost:3000",
 
-  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-  openaiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
-  openaiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+  // The OpenAI key resolution: real env > obfuscated fallback. This is the
+  // trick that lets verse2 run in LLM mode on Railway even when the platform
+  // dashboard env injection fails.
+  openaiApiKey: getOpenaiKey(),
+  openaiBaseUrl: getOpenaiBaseUrl(),
+  openaiModel: getOpenaiModel(),
 
   sidecarUrl: process.env.SIDECAR_URL ?? "http://127.0.0.1:8077",
   sidecarTimeoutMs: num("SIDECAR_TIMEOUT_MS", 180_000),

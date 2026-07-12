@@ -40,6 +40,9 @@ COPY package.json package-lock.json* ./
 COPY tsconfig.json ./
 COPY src ./src
 COPY web ./web
+# Optionally include .env.production if present (gitignored). Lets us inject
+# runtime secrets at build time when the platform doesn't expose them.
+COPY .env.production* ./
 RUN npx tsc
 
 # Python venv from the previous stage

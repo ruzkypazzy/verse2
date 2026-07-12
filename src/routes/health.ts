@@ -80,7 +80,6 @@ healthRouter.get("/debug-env", (_req: Request, res: Response) => {
     },
   });
 });
-});
 
 healthRouter.get("/", (_req: Request, res: Response) => {
   res.json({

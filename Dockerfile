@@ -70,6 +70,15 @@ RUN chmod +x /app/start.sh
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    SIDECAR_URL=http://127.0.0.1:8077
+    SIDECAR_URL=http://127.0.0.1:8077 \
+    PUBLIC_BASE_URL=https://outstanding-determination-production-06de.up.railway.app \
+    RECEIVING_WALLET_ADDRESS=0x72233b78747765244855dd27180bbed9c0245f96 \
+    X402_NETWORK=eip155:196 \
+    X402_ASSET=0x779ded0c9e1022225f8e0630b35a9b54be713736 \
+    X402_PACKAGE_PRICE=2.0 \
+    X402_REVISION_PRICE=0.3 \
+    DATA_DIR=./data \
+    OUTPUT_DIR=./data/outputs \
+    DB_PATH=./data/verse2.db
 EXPOSE 3000
 CMD ["/app/start.sh"]

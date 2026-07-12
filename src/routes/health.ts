@@ -4,7 +4,7 @@ import { Router, type Request, type Response } from "express";
 import { env, hasLLM } from "../config/env.js";
 import { sidecarHealth } from "../services/audioAnalyzer.js";
 import { existsSync, statSync, readdirSync, mkdirSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { writeFile, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const healthRouter = Router();

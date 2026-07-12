@@ -43,7 +43,7 @@ How it was built:
 - Puppeteer for HTML→PDF rendering of the treatment
 - OpenAI-compatible LLM (works with OpenAI, FreeModel.dev, or any /v1/chat/completions endpoint)
 - Single Docker image with both the Node API and Python sidecar, deploys in 3 minutes
-- Live on Railway at https://outstanding-determination-production-06de.up.railway.app
+- Live on Railway at https://verse2.org
 
 Real example output (run on 2026-07-12 against a synthetic 30s afrobeats track):
 - 3 distinct concepts: "Neon Dreams", "Afro Urban Flow", "Cultural Pulse"

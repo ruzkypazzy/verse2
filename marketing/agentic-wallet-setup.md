@@ -87,7 +87,7 @@ Help me register an A2MCP ASP on OKX.AI using OKX Agent Identity from Onchain OS
 The agent will ask you for:
 - **Name:** `VERSE2 — Music Video Creative Director`
 - **Description:** (paste from `marketing/google-form-prefill.md`, the long one)
-- **Service list:** one entry, name = "VERSE2", endpoint = `https://outstanding-determination-production-06de.up.railway.app/v1/package`
+- **Service list:** one entry, name = "VERSE2", endpoint = `https://verse2.org/v1/package`
 - **Default pricing:** `2.0` USDT0 per call
 
 The agent does the rest. You'll get:
@@ -120,7 +120,7 @@ That puts it on the public marketplace at `okx.ai/agents`. Done.
 | "Email not received" | Check spam. Wait 5 min. The email is from `noreply@okx.com` or similar. |
 | "Invalid email" | Use the exact `pazzycamero@gmail.com` (case doesn't matter) |
 | "Wallet creation failed" | Retry. Sometimes the first attempt times out — just run the login prompt again. |
-| "Endpoint not reachable" | Make sure verse2 is live. I can verify for you: `curl https://outstanding-determination-production-06de.up.railway.app/health` |
+| "Endpoint not reachable" | Make sure verse2 is live. I can verify for you: `curl https://verse2.org/health` |
 | "Pricing rejected" | Try `1.0` instead of `2.0` for the per-call price — some reviewers want sub-$1 calls |
 
 ---

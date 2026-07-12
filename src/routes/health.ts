@@ -5,7 +5,10 @@ import { env, hasLLM } from "../config/env.js";
 import { sidecarHealth } from "../services/audioAnalyzer.js";
 import { existsSync, statSync, readdirSync, mkdirSync } from "node:fs";
 import { writeFile, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const healthRouter = Router();
 

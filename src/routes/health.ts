@@ -81,6 +81,21 @@ healthRouter.get("/debug-env", (_req: Request, res: Response) => {
   });
 });
 
+// Public demo track (royalty-free synthetic afrobeats) for the demo video
+// and live testing. 30 seconds, 22050 Hz mono.
+import { createReadStream } from "node:fs";
+healthRouter.get("/demo-track.wav", (_req: Request, res: Response) => {
+  const path = resolve(__dirname, "../../demo-track.wav");
+  if (!existsSync(path)) {
+    res.status(404).json({ error: "demo track not bundled" });
+    return;
+  }
+  res.setHeader("Content-Type", "audio/wav");
+  res.setHeader("Content-Length", String(statSync(path).size));
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  createReadStream(path).pipe(res);
+});
+
 healthRouter.get("/", (_req: Request, res: Response) => {
   res.json({
     name: "VERSE2",

@@ -11,15 +11,16 @@ I uploaded an afrobeats track to an AI.
 
 In 47 seconds it returned:
 — full music video treatment (3 distinct concepts)
-— 27 timestamped shots across intro/verse/chorus/bridge/outro
+— 9 timestamped shots across intro/verse/chorus
 — 3-day shooting schedule
-— $22,440 budget that auto-fits your cap
+— $23,320 budget that auto-fits your cap
 
 Meet VERSE2 — my A2MCP agent on OKX.AI.
-Live on X Layer. Pay per call, ~2 USDT0.
+Live on X Layer. Pay per call, 2 USDT0.
 
-Demo 👇
+Try it 👇
 [video]
+[link to live service]
 
 #OKXAI @XLayerOfficial @okx
 ```

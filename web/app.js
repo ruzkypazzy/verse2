@@ -40,6 +40,15 @@ $("#form-audio").addEventListener("submit", (e) => {
   showStep(2);
 });
 
+// If we landed here with ?job=<id> (from the landing page CTA),
+// show the result for that job directly.
+const urlJobId = new URLSearchParams(window.location.search).get("job");
+if (urlJobId) {
+  state.audioUrl = "(loaded from landing page)";
+  showStep(3);
+  startJobViewer(urlJobId);
+}
+
 // Step 2 → 3
 $("#form-interview").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -220,4 +229,67 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// ---- VIEW AN EXISTING JOB (used when landing page redirects with ?job=) ----
+function startJobViewer(jobId) {
+  const loadingMsg = $("#loading-msg");
+  const loadingDetail = $("#loading-detail");
+  const bar = $("#bar");
+  if (loadingMsg) loadingMsg.textContent = `Loading job ${jobId.slice(0, 8)}…`;
+  if (loadingDetail) loadingDetail.textContent = "fetching from server…";
+  if (bar) bar.style.width = "30%";
+
+  const start = Date.now();
+  const POLL_TIMEOUT = 120_000;
+  const POLL_INTERVAL = 1500;
+
+  const stages = [
+    { at: 0, msg: "fetching from server…", bar: 30 },
+    { at: 5000, msg: "audio analysis…", bar: 50 },
+    { at: 12000, msg: "writing visual concepts (LLM)…", bar: 70 },
+    { at: 25000, msg: "computing budget + schedule…", bar: 85 },
+    { at: 40000, msg: "rendering treatment + shot list…", bar: 95 },
+  ];
+  let stageIdx = 0;
+  function tickStage() {
+    if (stageIdx >= stages.length) return;
+    const s = stages[stageIdx];
+    if (Date.now() - start >= s.at) {
+      if (loadingDetail) loadingDetail.textContent = s.msg;
+      if (bar) bar.style.width = s.bar + "%";
+      stageIdx += 1;
+    }
+    if (stageIdx < stages.length) setTimeout(tickStage, 500);
+  }
+  setTimeout(tickStage, 100);
+
+  const poll = setInterval(async () => {
+    if (Date.now() - start > POLL_TIMEOUT) {
+      clearInterval(poll);
+      if (loadingMsg) loadingMsg.textContent = "Taking longer than expected";
+      if (loadingDetail) loadingDetail.textContent = "The LLM run is slow. Refresh the page in a minute, or check the link in your dashboard.";
+      return;
+    }
+    try {
+      const r = await fetch(`/v1/jobs/${jobId}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.status === "complete" || j.result) {
+        clearInterval(poll);
+        state.result = j.result;
+        if (bar) bar.style.width = "100%";
+        renderResults();
+        showStep(4);
+      } else if (j.status === "error") {
+        clearInterval(poll);
+        if (loadingMsg) loadingMsg.textContent = "Generation failed";
+        if (loadingDetail) loadingDetail.textContent = j.error || "Unknown error — try again.";
+      } else {
+        if (loadingDetail) loadingDetail.textContent = `status: ${j.status || "running"}…`;
+      }
+    } catch {
+      // network blip, keep polling
+    }
+  }, POLL_INTERVAL);
 }

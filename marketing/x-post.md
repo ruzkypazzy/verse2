@@ -16,11 +16,11 @@ In 47 seconds it returned:
 — $23,320 budget that auto-fits your cap
 
 Meet VERSE2 — my A2MCP agent on OKX.AI.
-Live on X Layer. Pay per call, 2 USDT0.
+Live at verse2.org. Pay per call, 2 USDT0.
 
 Try it 👇
 [video]
-[link to live service]
+https://verse2.org
 
 #OKXAI @XLayerOfficial @okx
 ```
@@ -41,7 +41,8 @@ Built for the OKX.AI Genesis Hackathon.
 Artistic Excellence track.
 
 #OKXAI @XLayerOfficial @okx
-[link] [video]
+https://verse2.org
+[video]
 ```
 
 ---
@@ -60,6 +61,8 @@ Stack:
 - single-image Docker, full deploy in 3 min
 
 Open source: github.com/ruzkypazzy/verse2
+
+Try it: https://verse2.org
 
 #OKXAI @XLayerOfficial @okx
 [video]

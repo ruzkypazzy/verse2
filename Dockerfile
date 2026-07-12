@@ -49,6 +49,8 @@ RUN npx tsc
 COPY --from=python-deps /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY sidecar /app/sidecar
+COPY demo-track.wav /app/demo-track.wav
+COPY demo-track.wav /app/demo-track.wav
 ENV PYTHONUNBUFFERED=1
 
 # Supervisor script that runs both the sidecar and the API in one container.

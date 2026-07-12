@@ -52,15 +52,25 @@ if (urlJobId) {
 
 // ---- DEMO MODE TOGGLE ----
 // "Use demo (free)" in the banner — allows the wizard to run without payment.
-$("#banner-use-demo")?.addEventListener("click", () => {
-  state.useBypass = true;
+function setDemoMode(on) {
+  state.useBypass = on;
   const banner = $("#pay-banner");
-  if (banner) {
+  const headline = $("#banner-headline");
+  const sub = $("#banner-sub");
+  if (!banner || !headline || !sub) return;
+  if (on) {
     banner.classList.add("demo-mode");
-    banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
-    banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
+    headline.textContent = "Demo mode (free)";
+    sub.textContent = "Running without x402 payment. No wallet needed.";
+  } else {
+    banner.classList.remove("demo-mode");
+    headline.textContent = "Pay per call: 2 USDT0 via x402 on X Layer";
+    sub.textContent = "0.3 USDT0 per revision · 0.001 USDT0 ≈ nothing for a full package";
   }
-  // Pre-fill the demo track for the user
+}
+
+$("#banner-use-demo")?.addEventListener("click", () => {
+  setDemoMode(true);
   const audioInput = $("#audio-url");
   if (audioInput) {
     audioInput.value = window.location.origin + "/demo-track.wav";
@@ -74,16 +84,10 @@ $("#banner-use-marketplace")?.addEventListener("click", () => {
 
 // "Try the demo track for free" link in the step-1 form
 $("#use-demo-track")?.addEventListener("click", () => {
-  state.useBypass = true;
+  setDemoMode(true);
   const audioInput = $("#audio-url");
   if (audioInput) {
     audioInput.value = window.location.origin + "/demo-track.wav";
-  }
-  const banner = $("#pay-banner");
-  if (banner) {
-    banner.classList.add("demo-mode");
-    banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
-    banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
   }
 });
 
@@ -159,13 +163,7 @@ async function runPackage() {
       const fallback = $("#fallback-demo");
       if (fallback) {
         fallback.addEventListener("click", () => {
-          state.useBypass = true;
-          const banner = $("#pay-banner");
-          if (banner) {
-            banner.classList.add("demo-mode");
-            banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
-            banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
-          }
+          setDemoMode(true);
           runPackage();
         });
       }

@@ -19,6 +19,21 @@
     </nav>
   </header>
 
+  <!-- Payment-mode banner -->
+  <div class="pay-banner" id="pay-banner">
+    <div class="pay-banner-content">
+      <div class="pay-banner-icon">💳</div>
+      <div class="pay-banner-text">
+        <strong>Pay per call:</strong> 2 USDT0 via x402 on X Layer
+        <small>· 0.3 USDT0 per revision · 0.001 USDT0 ≈ nothing for a full package</small>
+      </div>
+      <div class="pay-banner-actions">
+        <button class="ghost small" id="banner-use-marketplace">Use marketplace</button>
+        <button class="ghost small" id="banner-use-demo">Use demo (free)</button>
+      </div>
+    </div>
+  </div>
+
   <main id="main">
     <!-- STEP 1: audio -->
     <section class="step" id="step-1">
@@ -29,7 +44,11 @@
           <span>Audio URL <small>(mp3 / wav / m4a / flac, ≤ 60MB)</small></span>
           <input id="audio-url" type="url" required placeholder="https://example.com/your-track.mp3" />
         </label>
-        <button type="submit" class="primary">Continue</button>
+        <button type="submit" class="primary">Continue →</button>
+        <p class="micro">
+          💡 Don't have a song URL handy?
+          <button type="button" class="link-btn" id="use-demo-track">Try the demo track for free</button>
+        </p>
       </form>
     </section>
 
@@ -72,8 +91,8 @@
           <textarea id="i-must" rows="2" placeholder="drone shot of the third mainland bridge..."></textarea>
         </label>
         <div class="actions">
-          <button type="button" class="ghost" id="back-1">Back</button>
-          <button type="submit" class="primary">Generate package</button>
+          <button type="button" class="ghost" id="back-1">← Back</button>
+          <button type="submit" class="primary">Generate package (2 USDT0)</button>
         </div>
       </form>
     </section>
@@ -85,6 +104,7 @@
         <h2 id="loading-msg">Listening to your track…</h2>
         <div class="progress"><div class="bar" id="bar"></div></div>
         <p class="meta" id="loading-detail">Audio analysis · 0 of 4 stages</p>
+        <p class="meta" id="loading-cost" style="margin-top: 16px; font-size: 12px; opacity: 0.7;">This will cost 2 USDT0 once generation finishes.</p>
       </div>
     </section>
 
@@ -120,7 +140,8 @@
       </div>
 
       <div class="actions">
-        <button class="ghost" id="back-2">Start over</button>
+        <button class="ghost" id="back-2">← Start over</button>
+        <button class="primary" id="revise-btn">Request revision (0.3 USDT0)</button>
       </div>
     </section>
   </main>

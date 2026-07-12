@@ -10,6 +10,7 @@ const state = {
   interview: {},
   result: null,
   selectedConcept: 0,
+  useBypass: false, // true when "Use demo (free)" was clicked; sends x-payment bypass header
 };
 
 function showStep(n) {
@@ -48,6 +49,43 @@ if (urlJobId) {
   showStep(3);
   startJobViewer(urlJobId);
 }
+
+// ---- DEMO MODE TOGGLE ----
+// "Use demo (free)" in the banner — allows the wizard to run without payment.
+$("#banner-use-demo")?.addEventListener("click", () => {
+  state.useBypass = true;
+  const banner = $("#pay-banner");
+  if (banner) {
+    banner.classList.add("demo-mode");
+    banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
+    banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
+  }
+  // Pre-fill the demo track for the user
+  const audioInput = $("#audio-url");
+  if (audioInput) {
+    audioInput.value = window.location.origin + "/demo-track.wav";
+  }
+});
+
+// "Use marketplace" in the banner — open the OKX.AI marketplace search for VERSE2
+$("#banner-use-marketplace")?.addEventListener("click", () => {
+  window.open("https://www.okx.ai/", "_blank", "noopener");
+});
+
+// "Try the demo track for free" link in the step-1 form
+$("#use-demo-track")?.addEventListener("click", () => {
+  state.useBypass = true;
+  const audioInput = $("#audio-url");
+  if (audioInput) {
+    audioInput.value = window.location.origin + "/demo-track.wav";
+  }
+  const banner = $("#pay-banner");
+  if (banner) {
+    banner.classList.add("demo-mode");
+    banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
+    banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
+  }
+});
 
 // Step 2 → 3
 $("#form-interview").addEventListener("submit", async (e) => {
@@ -93,15 +131,46 @@ async function runPackage() {
   }, 600);
 
   try {
+    const headers = { "content-type": "application/json" };
+    if (state.useBypass) {
+      // Demo mode — server accepts this header in lieu of a real x402 signature
+      headers["x-payment"] = "demo-bypass";
+    }
     const res = await fetch("/v1/package", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify({
         audio_url: state.audioUrl,
         interview: state.interview,
       }),
     });
     clearInterval(tick);
+    if (res.status === 402 && !state.useBypass) {
+      // Real x402 challenge returned. Show marketplace CTA.
+      const challenge = await res.json().catch(() => ({}));
+      const cost = challenge?.challenge?.accepts?.[0];
+      bar.style.width = "100%";
+      msg.textContent = "Payment required (x402 v2)";
+      const costStr = cost ? `${(Number(cost.amount) / 1_000_000).toFixed(2)} ${cost.extra?.name || "USDT0"}` : "2 USDT0";
+      det.innerHTML = `This call costs ${costStr} on ${cost?.network || "eip155:196"}.<br>` +
+        `<strong>Two ways to pay:</strong><br>` +
+        `&nbsp;&nbsp;1. Open the <a href="https://www.okx.ai/" target="_blank" rel="noopener" style="color:var(--accent)">OKX.AI marketplace</a> to invoke VERSE2 from there (wallet pre-authorized).<br>` +
+        `&nbsp;&nbsp;2. Or click <button id="fallback-demo" class="link-btn" style="color:var(--accent)">try the demo (free)</button> to run without payment.`;
+      const fallback = $("#fallback-demo");
+      if (fallback) {
+        fallback.addEventListener("click", () => {
+          state.useBypass = true;
+          const banner = $("#pay-banner");
+          if (banner) {
+            banner.classList.add("demo-mode");
+            banner.querySelector(".pay-banner-text strong").textContent = "Demo mode (free)";
+            banner.querySelector(".pay-banner-text small").textContent = "Running without x402 payment. No wallet needed.";
+          }
+          runPackage();
+        });
+      }
+      return;
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       bar.style.width = "100%";

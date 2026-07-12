@@ -33,13 +33,18 @@ healthRouter.get("/health", async (_req: Request, res: Response) => {
       return existsSync(env.outputDir) && statSync(env.outputDir).isDirectory();
     }, env.outputDir),
     db: await check("db", () => {
-      const path = env.dbPath;
-      const dir = join(path, "..");
-      mkdirSync(dir, { recursive: true });
-      if (!existsSync(path)) {
-        writeFile(path, "", "utf8").catch(() => undefined);
+      try {
+        const path = env.dbPath;
+        const dir = join(path, "..");
+        mkdirSync(dir, { recursive: true });
+        // Touch the file so the next connect() works
+        if (!existsSync(path)) {
+          writeFileSync(path, "", "utf8");
+        }
+        return existsSync(path);
+      } catch (err) {
+        return false;
       }
-      return existsSync(path);
     }, env.dbPath),
   };
   const allOk = Object.values(checks).every((c) => c.ok);

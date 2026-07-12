@@ -23,9 +23,29 @@ app.use(healthRouter);
 // Static web assets (css/js/images) from /web
 const webDir = join(__dirname, "..", "web");
 if (existsSync(webDir)) {
-  app.use("/web", express.static(webDir));
-  app.use("/static", express.static(webDir)); // alias
+  app.use("/web", express.static(webDir, { index: false })); // no index.html auto-serve
+  app.use("/static", express.static(webDir, { index: false }));
 }
+
+// Serve favicon and OG image at root for the landing page meta tags
+app.get("/favicon.svg", (_req, res) => {
+  const path = join(webDir, "favicon.svg");
+  if (existsSync(path)) {
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.send(readFileSync(path));
+    return;
+  }
+  res.status(404).end();
+});
+app.get("/og-image.png", (_req, res) => {
+  const path = join(webDir, "og-image.png");
+  if (existsSync(path)) {
+    res.setHeader("Content-Type", "image/png");
+    res.send(readFileSync(path));
+    return;
+  }
+  res.status(404).end();
+});
 
 // Landing page at /
 app.get("/", (_req, res) => {

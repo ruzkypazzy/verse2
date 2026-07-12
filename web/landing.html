@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>VERSE2 — Music video creative director, in 60 seconds</title>
+  <meta name="description" content="Drop a song URL. Get a complete music video pre-production package: cinematic treatment, scene-by-scene shot list, production schedule, and a deterministic budget. Pay per call in USDT0 on X Layer." />
+
+  <!-- Open Graph (for X / LinkedIn previews) -->
+  <meta property="og:title" content="VERSE2 — Music video creative director, in 60 seconds" />
+  <meta property="og:description" content="Drop a song URL. Get a complete music video pre-production package: treatment, shot list, schedule, and a budget that auto-fits your cap. Pay per call in USDT0 on X Layer." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/web/og-image.png" />
+  <meta property="og:url" content="https://outstanding-determination-production-06de.up.railway.app/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="VERSE2 — Music video creative director, in 60 seconds" />
+  <meta name="twitter:description" content="Drop a song URL. Get a complete music video pre-production package in under a minute. Pay per call in USDT0 on X Layer." />
+  <meta name="twitter:image" content="/web/og-image.png" />
+
+  <link rel="icon" type="image/svg+xml" href="/web/favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body class="landing">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">▶</span>
+      <span class="name">VERSE2</span>
+      <span class="tag">Music Video Creative Director</span>
+    </div>
+    <nav class="nav">
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#sample">Sample</a>
+      <a class="link" href="#pricing">Pricing</a>
+      <a class="link" href="/asp.json" target="_blank" rel="noopener">ASP</a>
+      <a class="link" href="/app/" id="app-link">Open app</a>
+      <span class="status" id="status-badge" title="Service health">
+        <span class="dot"></span><span class="dot-text">live</span>
+      </span>
+    </nav>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="kicker">OKX.AI · A2MCP · Artistic Excellence</p>
+        <h1>Drop a track.<br/>Get a full music video treatment in 60 seconds.</h1>
+        <p class="lede">
+          VERSE2 listens to your song, breaks it into sections, and produces a cinematic
+          treatment with a scene-by-scene shot list, production schedule, and a budget
+          that auto-fits your cap.
+        </p>
+        <div class="cta-row">
+          <button class="primary big" id="try-demo">▶ Try with demo track</button>
+          <a class="ghost big" href="/app/">Or paste your own URL</a>
+        </div>
+        <p class="micro">
+          Pay per call in USDT0 on X Layer. <span class="kbd">2 USDT0</span> per package ·
+          <span class="kbd">0.3 USDT0</span> per revision.
+        </p>
+      </div>
+      <div class="hero-player">
+        <div class="player">
+          <div class="player-head">
+            <span class="player-pill">Sample track</span>
+            <span class="player-meta" id="player-meta">30s · 104 BPM · royalty-free</span>
+          </div>
+          <div class="player-title">Lagos Sunrise (synthetic afrobeats)</div>
+          <audio id="demo-audio" controls preload="metadata" src="/demo-track.wav">
+            Your browser does not support the audio element.
+          </audio>
+          <div class="player-actions">
+            <button class="ghost small" id="trigger-package" disabled>Generating…</button>
+            <span class="player-status" id="player-status">click play to load the package</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how" id="how">
+      <h2>How it works</h2>
+      <ol class="how-grid">
+        <li>
+          <span class="step-num">1</span>
+          <h3>Verse2 listens</h3>
+          <p>It downloads your audio and runs spectral clustering to detect the song's structure — intro, verse, chorus, bridge, outro.</p>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <h3>It writes the treatment</h3>
+          <p>An LLM produces three distinct visual concepts: cinematic logline, visual style, scene-by-scene shot list, and pacing notes.</p>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <h3>It prices the shoot</h3>
+          <p>A deterministic budget engine tallies locations, cast, dancers, camera, lighting, drone, and FX against a versioned rate card. If you're over cap, it iterates 6 strategies to fit.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- SAMPLE TREATMENT -->
+    <section class="sample" id="sample">
+      <div class="sample-head">
+        <h2>Sample output · "Lagos Sunrise"</h2>
+        <p class="meta">Real run on 2026-07-12 · 30s synthetic afrobeats · $50,000 cap</p>
+      </div>
+
+      <div class="sample-grid">
+        <article class="concept-card">
+          <header><h3>Urban Night Vibes</h3><span class="concept-tag">Concept 0</span></header>
+          <p class="logline">A mesmerizing exploration of Lagos nightlife, blending vibrant street culture with intimate moments.</p>
+          <p class="visual">Anamorphic lenses, electric blues and pinks, deep shadows, drone over Mushin market at 11pm.</p>
+          <footer><span>3 days · 7 scenes · 19 shots</span><strong>$18,260</strong></footer>
+        </article>
+        <article class="concept-card">
+          <header><h3>Nature's Embrace</h3><span class="concept-tag">Concept 1</span></header>
+          <p class="logline">A serene journey through lush landscapes, blending nature's beauty with soulful moments.</p>
+          <p class="visual">Soft daylight, hand-held, natural grain. Riverside park, 7am, tight on the artist's face, 3 dancers.</p>
+          <footer><span>3 days · 5 scenes · 11 shots</span><strong>$14,820</strong></footer>
+        </article>
+        <article class="concept-card">
+          <header><h3>Urban Groove</h3><span class="concept-tag">Concept 2</span></header>
+          <p class="logline">A vibrant celebration of city life, showcasing the hustle and flow of urban culture.</p>
+          <p class="visual">High-contrast street cinematography, rooftop bar at midnight, 12 dancers, drone pull-back on the skyline.</p>
+          <footer><span>3 days · 6 scenes · 16 shots</span><strong>$17,940</strong></footer>
+        </article>
+      </div>
+
+      <div class="sample-stats">
+        <div class="stat"><span class="num">3</span><span class="lbl">distinct concepts</span></div>
+        <div class="stat"><span class="num">47s</span><span class="lbl">avg generation time</span></div>
+        <div class="stat"><span class="num">$18,260</span><span class="lbl">median budget</span></div>
+        <div class="stat"><span class="num">0</span><span class="lbl">optimization iterations needed</span></div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="pricing" id="pricing">
+      <h2>Pricing</h2>
+      <p class="lede">Pay per call. No subscription, no platform fee, no KYC. The protocol handles settlement.</p>
+      <div class="price-grid">
+        <div class="price-card">
+          <h3>Package</h3>
+          <p class="price"><span class="amount">2</span><span class="unit"> USDT0</span></p>
+          <p class="price-detail">per call · includes treatment + 3 concepts + shot list + schedule + budget</p>
+          <ul>
+            <li>Audio structure detection</li>
+            <li>3 distinct visual concepts</li>
+            <li>Scene-by-scene shot list</li>
+            <li>Production schedule</li>
+            <li>Deterministic budget breakdown</li>
+            <li>PDF, HTML, CSV deliverables</li>
+          </ul>
+        </div>
+        <div class="price-card highlight">
+          <span class="ribbon">popular for art</span>
+          <h3>Revision</h3>
+          <p class="price"><span class="amount">0.3</span><span class="unit"> USDT0</span></p>
+          <p class="price-detail">per free-text revision · regenerates the selected concept with your direction</p>
+          <ul>
+            <li>Adjusts visual style, scenes, shots</li>
+            <li>Recomputes budget against the same cap</li>
+            <li>Keeps your job context</li>
+            <li>Same deliverable file types</li>
+          </ul>
+        </div>
+      </div>
+      <p class="protocol-note">
+        Payments are settled onchain via <a href="https://web3.okx.com/onchainos/dev-docs/okxai/howtomcp" target="_blank" rel="noopener">x402 v2</a> on X Layer (chain 196) in USDT0.
+      </p>
+    </section>
+
+    <!-- TECH -->
+    <section class="tech">
+      <h2>Under the hood</h2>
+      <ul class="tech-list">
+        <li><strong>Audio analysis</strong> · Python sidecar (FastAPI + librosa), Laplacian segmentation with novelty-based structural clustering</li>
+        <li><strong>Visual concepts</strong> · gpt-4o-mini (OpenAI-compatible), prompt-engineered for cinematic specificity</li>
+        <li><strong>Budget engine</strong> · deterministic, 4 rate cards (NGN, USD, EUR, GBP), 6 optimization strategies</li>
+        <li><strong>Payments</strong> · x402 v2 protocol, CAIP-2 <code>eip155:196</code>, USDT0 contract <code>0x779d...3736</code></li>
+        <li><strong>Storage</strong> · better-sqlite3 with WAL mode, jobs persist across requests</li>
+        <li><strong>Deploy</strong> · single Docker image (Node + Python sidecar), 3-minute cold start on Railway</li>
+        <li><strong>Open source</strong> · <a href="https://github.com/ruzkypazzy/verse2" target="_blank" rel="noopener">github.com/ruzkypazzy/verse2</a></li>
+      </ul>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-strip">
+      <h2>Try it now</h2>
+      <p>Drop your own song URL, or use the demo track.</p>
+      <div class="cta-row">
+        <button class="primary big" id="try-demo-2">▶ Try with demo track</button>
+        <a class="ghost big" href="/app/">Open the app</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>VERSE2 · An OKX.AI ASP · pay-per-call via x402 on X Layer</span>
+    <span class="links">
+      <a href="/asp.json">manifest</a> · <a href="/health">status</a> · <a href="https://github.com/ruzkypazzy/verse2" target="_blank" rel="noopener">github</a>
+    </span>
+  </footer>
+
+  <script src="landing.js"></script>
+</body>
+</html>

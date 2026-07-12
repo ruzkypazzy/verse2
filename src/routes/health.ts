@@ -117,7 +117,7 @@ healthRouter.get("/demo-track.wav", (_req: Request, res: Response) => {
   }
 });
 
-healthRouter.get("/", (_req: Request, res: Response) => {
+healthRouter.get("/welcome.json", (_req: Request, res: Response) => {
   res.json({
     name: "VERSE2",
     description: "Autonomous AI music video creative director. Upload a song, get a complete pre-production package in under a minute.",
@@ -133,10 +133,12 @@ healthRouter.get("/", (_req: Request, res: Response) => {
       job: "GET /v1/jobs/:id",
       revise: "POST /v1/jobs/:id/revise (x402-gated)",
       files: "GET /v1/jobs/:id/files/:filename",
-      web_ui: "GET /web/",
+      web_ui: "GET /",
+      app: "GET /app/",
     },
     asp_manifest: "/asp.json",
-    web_ui_url: "/web/",
+    web_ui_url: "/",
+    app_url: "/app/",
   });
 });
 

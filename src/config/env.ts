@@ -1,9 +1,16 @@
 import { config as loadDotenv } from "dotenv";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-loadDotenv({ path: resolve(__dirname, "../../.env") });
+const envFilePath = resolve(__dirname, "../../.env");
+// Only load .env if it exists. In production (Railway, Docker, etc.) the
+// env vars are injected via the platform, and dotenv would silently overwrite
+// them with `undefined` from the missing file.
+if (existsSync(envFilePath)) {
+  loadDotenv({ path: envFilePath });
+}
 
 function req(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;

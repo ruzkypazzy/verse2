@@ -59,8 +59,7 @@ app.get("/", (_req, res) => {
 });
 
 // Wizard at /app/
-app.get("/app", (_req, res) => res.redirect(301, "/app/"));
-app.get("/app/", (_req, res) => {
+const appHandler = (_req: express.Request, res: express.Response) => {
   const path = join(webDir, "app.html");
   if (existsSync(path)) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -68,11 +67,11 @@ app.get("/app/", (_req, res) => {
     return;
   }
   res.status(503).json({ error: "app not yet built" });
-});
+};
+app.get(["/app", "/app/"], appHandler);
 
-// /web/ still works as a legacy alias (redirects to /)
+// /web/ legacy alias (redirects to /) - only the no-slash form
 app.get("/web", (_req, res) => res.redirect(301, "/"));
-app.get("/web/", (_req, res) => res.redirect(301, "/"));
 
 // Default 404
 app.use((_req, res) => {

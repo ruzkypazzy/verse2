@@ -97,3 +97,4 @@ app.listen(env.port, env.host, () => {
     `[verse2] listening on http://${env.host}:${env.port}  (sidecar=${env.sidecarUrl}, llm=${env.openaiApiKey ? "on" : "mock"})`
   );
 });
+// rebuilt 2026-07-15T17:35:35Z

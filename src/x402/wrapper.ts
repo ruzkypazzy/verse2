@@ -115,10 +115,12 @@ export function x402Middleware(): RequestHandler {
       currentUrl: process.env.PUBLIC_BASE_URL ?? "https://verse2.org",
       testnet: NETWORK === "eip155:195",
     },
-    // syncFacilitatorOnStart: pass as the 5th positional arg to skip boot
-    // sync (which would call OKX's /supported when creds are missing/stale).
+    // syncFacilitatorOnStart: must be true so the SDK can call
+    // /supported on the facilitator and learn what schemes/networks are
+    // available. Without it, the SDK throws
+    // "Facilitator does not support exact on eip155:196" on every request.
     undefined,
-    false,
+    true,
   );
 
   // Combine: demo-bypass requests skip the SDK, all others go through it.

@@ -127,51 +127,70 @@ let cachedMiddleware: RequestHandler | undefined;
 let cachedRoutesKey: string | undefined;
 
 export function x402Middleware(): RequestHandler {
-  const routesKey = `${env.receivingWallet}|${env.x402PackagePrice}|${env.x402RevisionPrice}|${NETWORK}`;
+  const routesKey = `${env.receivingWallet}|${env.x402PackagePrice}|${env.x402RevisionPrice}|${NETWORK}|${process.env.OKX_FACILITATOR_API_KEY ?? "none"}`;
   if (cachedMiddleware && cachedRoutesKey === routesKey) {
     return cachedMiddleware;
   }
   const routes = buildRoutes();
   const facilitator = buildFacilitatorClient();
-  const scheme = new ExactEvmScheme();
 
   if (!facilitator) {
     // eslint-disable-next-line no-console
     console.warn(
-      "[x402] OKX facilitator creds missing — using built-in 402 challenge. " +
-      "Apply at https://web3.okx.com/onchainos/dev-portal to enable paid-request verification."
+      "[x402] OKX facilitator creds missing — using built-in 402 challenge."
     );
     cachedMiddleware = buildFallbackMiddleware();
     cachedRoutesKey = routesKey;
     return cachedMiddleware;
   }
 
-  const sdkMiddleware = paymentMiddlewareFromConfig(
-    routes,
-    facilitator,
-    [{ network: NETWORK, server: scheme }],
-    {
-      appName: "VERSE2",
-      currentUrl: process.env.PUBLIC_BASE_URL ?? "https://verse2.org",
-      testnet: NETWORK === "eip155:195",
-    },
-    undefined,
-    true,
-  );
+  // Wrap the SDK init in try/catch. If getSupported() at boot returns 401
+  // (wrong creds, IP whitelist, regional block), we fall back gracefully
+  // instead of crashing startup. The boot-time getSupported() call is also
+  // disabled below (syncFacilitatorOnStart: false) so we don't depend on
+  // it succeeding for the service to start.
+  try {
+    const scheme = new ExactEvmScheme();
+    const sdkMiddleware = paymentMiddlewareFromConfig(
+      routes,
+      facilitator,
+      [{ network: NETWORK, server: scheme }],
+      {
+        appName: "VERSE2",
+        currentUrl: process.env.PUBLIC_BASE_URL ?? "https://verse2.org",
+        testnet: NETWORK === "eip155:195",
+      },
+      undefined,
+      false, // syncFacilitatorOnStart: false — never crash on boot
+    );
 
-  const combined: RequestHandler = (req, res, next) => {
-    if (isDemoBypass(req)) {
-      next();
-      return;
-    }
-    Promise.resolve()
-      .then(() => sdkMiddleware(req, res, next))
-      .catch(next);
-  };
+    const combined: RequestHandler = (req, res, next) => {
+      if (isDemoBypass(req)) {
+        next();
+        return;
+      }
+      Promise.resolve()
+        .then(() => sdkMiddleware(req, res, next))
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("[x402] SDK middleware error, using fallback:", err?.message ?? err);
+          return buildFallbackMiddleware()(req, res, next);
+        });
+    };
 
-  cachedMiddleware = combined;
-  cachedRoutesKey = routesKey;
-  return combined;
+    cachedMiddleware = combined;
+    cachedRoutesKey = routesKey;
+    return combined;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[x402] SDK init failed (likely facilitator 401) — using built-in 402 challenge. Error:",
+      err,
+    );
+    cachedMiddleware = buildFallbackMiddleware();
+    cachedRoutesKey = routesKey;
+    return cachedMiddleware;
+  }
 }
 
 export const x402PackageGate = x402Middleware;

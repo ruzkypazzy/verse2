@@ -47,6 +47,19 @@ app.get("/og-image.png", (_req, res) => {
   res.status(404).end();
 });
 
+// Serve the 1080x1080 brand logo at /logo.png, /avatar.png, and /favicon.ico.
+// This is the same logo the OKX.AI listing uses for agent 5212.
+app.get(["/logo.png", "/avatar.png", "/favicon.ico"], (_req, res) => {
+  const logoPath = join(webDir, "verse2-avatar-1080.png");
+  if (existsSync(logoPath)) {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(readFileSync(logoPath));
+    return;
+  }
+  res.status(404).end();
+});
+
 // Landing page at /
 app.get("/", (_req, res) => {
   const path = join(webDir, "landing.html");

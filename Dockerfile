@@ -86,3 +86,5 @@ ENV NODE_ENV=production \
     DB_PATH=./data/verse2.db
 EXPOSE 3000
 CMD ["/app/start.sh"]
+
+# 1784132783 — re-trigger build for OKX SDK integration

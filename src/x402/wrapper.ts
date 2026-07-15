@@ -126,6 +126,39 @@ function buildFallbackMiddleware(): RequestHandler {
 let cachedMiddleware: RequestHandler | undefined;
 let cachedRoutesKey: string | undefined;
 
+// Pre-flight check: call getSupported() once at boot to verify the
+// facilitator creds work. If they don't, we use the built-in fallback.
+// This prevents the SDK from crashing startup when the facilitator is
+// unreachable (401, IP whitelist, regional block, etc).
+let facilitatorAvailable = false;
+async function preflightFacilitator(client: OKXFacilitatorClient): Promise<boolean> {
+  try {
+    const supported = await client.getSupported();
+    const kinds = (supported as { kinds?: Array<{ network: string; scheme: string }> }).kinds
+      ?? (supported as { data?: { kinds?: Array<{ network: string; scheme: string }> } }).data?.kinds
+      ?? [];
+    const hasExactEip155 = kinds.some(
+      (k) => k.scheme === "exact" && k.network === NETWORK,
+    );
+    if (!hasExactEip155) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[x402] OKX facilitator doesn't advertise 'exact' on ${NETWORK}. Supported kinds:`,
+        JSON.stringify(kinds.slice(0, 5)),
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[x402] Facilitator preflight failed:",
+      (err as Error)?.message ?? err,
+    );
+    return false;
+  }
+}
+
 export function x402Middleware(): RequestHandler {
   const routesKey = `${env.receivingWallet}|${env.x402PackagePrice}|${env.x402RevisionPrice}|${NETWORK}|${process.env.OKX_FACILITATOR_API_KEY ?? "none"}`;
   if (cachedMiddleware && cachedRoutesKey === routesKey) {
@@ -137,21 +170,22 @@ export function x402Middleware(): RequestHandler {
   if (!facilitator) {
     // eslint-disable-next-line no-console
     console.warn(
-      "[x402] OKX facilitator creds missing — using built-in 402 challenge."
+      "[x402] OKX facilitator creds missing — using built-in 402 challenge.",
     );
     cachedMiddleware = buildFallbackMiddleware();
     cachedRoutesKey = routesKey;
     return cachedMiddleware;
   }
 
-  // Wrap the SDK init in try/catch. If getSupported() at boot returns 401
-  // (wrong creds, IP whitelist, regional block), we fall back gracefully
-  // instead of crashing startup. The boot-time getSupported() call is also
-  // disabled below (syncFacilitatorOnStart: false) so we don't depend on
-  // it succeeding for the service to start.
+  // We have creds. Try to use the SDK. If preflight fails, fall back.
+  // We initialize the SDK synchronously (it doesn't make any network calls
+  // until the first request), so the cache key is set regardless of whether
+  // the facilitator is reachable. A successful preflight unlocks the real
+  // SDK path; failure locks in the fallback.
+  const scheme = new ExactEvmScheme();
+  let sdkMiddleware: RequestHandler | undefined;
   try {
-    const scheme = new ExactEvmScheme();
-    const sdkMiddleware = paymentMiddlewareFromConfig(
+    sdkMiddleware = paymentMiddlewareFromConfig(
       routes,
       facilitator,
       [{ network: NETWORK, server: scheme }],
@@ -161,54 +195,80 @@ export function x402Middleware(): RequestHandler {
         testnet: NETWORK === "eip155:195",
       },
       undefined,
-      false, // syncFacilitatorOnStart: false — never crash on boot
+      false,
     );
-
-    const combined: RequestHandler = (req, res, next) => {
-      if (isDemoBypass(req)) {
-        next();
-        return;
-      }
-      // Intercept the SDK's next(err) so we can serve our own 402 instead.
-      // The SDK middleware calls next(new Error(...)) when the facilitator
-      // doesn't support the requested network, which Express turns into 500.
-      // We don't want that — we want a proper 402 challenge.
-      const safeNext: NextFunction = (err) => {
-        if (err) {
-          // eslint-disable-next-line no-console
-          console.warn("[x402] SDK passed error to next(), serving fallback 402:", err?.message ?? err);
-          // Only fall back if the response hasn't been sent yet
-          if (!res.headersSent) {
-            buildFallbackMiddleware()(req, res, () => undefined);
-          }
-          return;
-        }
-        next();
-      };
-      Promise.resolve()
-        .then(() => sdkMiddleware(req, res, safeNext))
-        .catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error("[x402] SDK middleware threw, using fallback:", err?.message ?? err);
-          if (!res.headersSent) {
-            buildFallbackMiddleware()(req, res, () => undefined);
-          }
-        });
-    };
-
-    cachedMiddleware = combined;
-    cachedRoutesKey = routesKey;
-    return combined;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(
-      "[x402] SDK init failed (likely facilitator 401) — using built-in 402 challenge. Error:",
-      err,
-    );
+    console.error("[x402] SDK init failed:", (err as Error)?.message ?? err);
     cachedMiddleware = buildFallbackMiddleware();
     cachedRoutesKey = routesKey;
     return cachedMiddleware;
   }
+
+  // Run the preflight asynchronously. The first request to /v1/package
+  // might race the preflight, but the SDK will gracefully fail and we
+  // serve the fallback on any 5xx response.
+  preflightFacilitator(facilitator).then((ok) => {
+    facilitatorAvailable = ok;
+    if (ok) {
+      // eslint-disable-next-line no-console
+      console.log("[x402] OKX facilitator reachable — using real SDK for paid-request verification");
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn("[x402] OKX facilitator unreachable — using built-in 402 challenge");
+    }
+  });
+
+  // Wrap the SDK in a request-level fallback. If the SDK ever sends 5xx
+  // or calls next(err) because the facilitator doesn't support the
+  // network, we override and serve a proper 402 challenge.
+  const combined: RequestHandler = (req, res, next) => {
+    if (isDemoBypass(req)) {
+      next();
+      return;
+    }
+    // If preflight already failed, skip the SDK entirely
+    if (cachedMiddleware && !facilitatorAvailable) {
+      buildFallbackMiddleware()(req, res, next);
+      return;
+    }
+    // Intercept res.status(5xx) calls from the SDK and replace with 402
+    const originalStatus = res.status.bind(res);
+    res.status = (code: number) => {
+      if (code >= 500 && !res.headersSent) {
+        // eslint-disable-next-line no-console
+        console.warn(`[x402] SDK tried to send ${code}, overriding with 402`);
+        return originalStatus(402);
+      }
+      return originalStatus(code);
+    };
+    // Wrap next() to catch SDK errors
+    const safeNext: NextFunction = (err) => {
+      if (err && !res.headersSent) {
+        // eslint-disable-next-line no-console
+        console.warn("[x402] SDK error, serving fallback 402:", (err as Error)?.message ?? err);
+        res.status = originalStatus;
+        buildFallbackMiddleware()(req, res, () => undefined);
+        return;
+      }
+      res.status = originalStatus;
+      next();
+    };
+    Promise.resolve()
+      .then(() => sdkMiddleware!(req, res, safeNext))
+      .catch((err) => {
+        if (!res.headersSent) {
+          // eslint-disable-next-line no-console
+          console.error("[x402] SDK threw, serving fallback 402:", (err as Error)?.message ?? err);
+          res.status = originalStatus;
+          buildFallbackMiddleware()(req, res, () => undefined);
+        }
+      });
+  };
+
+  cachedMiddleware = combined;
+  cachedRoutesKey = routesKey;
+  return combined;
 }
 
 export const x402PackageGate = x402Middleware;

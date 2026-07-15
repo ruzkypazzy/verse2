@@ -169,12 +169,30 @@ export function x402Middleware(): RequestHandler {
         next();
         return;
       }
+      // Intercept the SDK's next(err) so we can serve our own 402 instead.
+      // The SDK middleware calls next(new Error(...)) when the facilitator
+      // doesn't support the requested network, which Express turns into 500.
+      // We don't want that — we want a proper 402 challenge.
+      const safeNext: NextFunction = (err) => {
+        if (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[x402] SDK passed error to next(), serving fallback 402:", err?.message ?? err);
+          // Only fall back if the response hasn't been sent yet
+          if (!res.headersSent) {
+            buildFallbackMiddleware()(req, res, () => undefined);
+          }
+          return;
+        }
+        next();
+      };
       Promise.resolve()
-        .then(() => sdkMiddleware(req, res, next))
+        .then(() => sdkMiddleware(req, res, safeNext))
         .catch((err) => {
           // eslint-disable-next-line no-console
-          console.error("[x402] SDK middleware error, using fallback:", err?.message ?? err);
-          return buildFallbackMiddleware()(req, res, next);
+          console.error("[x402] SDK middleware threw, using fallback:", err?.message ?? err);
+          if (!res.headersSent) {
+            buildFallbackMiddleware()(req, res, () => undefined);
+          }
         });
     };
 

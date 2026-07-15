@@ -82,15 +82,8 @@ function buildFacilitatorClient(): OKXFacilitatorClient | undefined {
  * this is purely a UX shortcut for the local frontend, not a way to
  * bypass the paid endpoint for any other caller.
  */
-function demoBypass(): RequestHandler {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    if (req.header("x-payment") === "demo-bypass") {
-      next();
-      return;
-    }
-    // Not a demo request — let the real x402 middleware handle it.
-    next("route");
-  };
+function isDemoBypass(req: Request): boolean {
+  return req.header("x-payment") === "demo-bypass";
 }
 
 let cachedMiddleware: RequestHandler | undefined;
@@ -128,14 +121,16 @@ export function x402Middleware(): RequestHandler {
     false,
   );
 
-  // Prepend the demo-bypass so the local UI keeps working. Any request
-  // without `x-payment: demo-bypass` falls through to the SDK middleware.
+  // Combine: demo-bypass requests skip the SDK, all others go through it.
+  // Inline branching is used instead of nested middleware because the SDK
+  // middleware is async and uses its own next() semantics, which don't
+  // play well with Express's "next('route')" sub-skip mechanism.
   const combined: RequestHandler = (req, res, next) => {
-    demoBypass()(req, res, (err) => {
-      if (!err) return next();
-      if (err === "route") return sdkMiddleware(req, res, next);
-      return next(err);
-    });
+    if (isDemoBypass(req)) {
+      next();
+      return;
+    }
+    Promise.resolve(sdkMiddleware(req, res, next)).catch(next);
   };
 
   cachedMiddleware = combined;

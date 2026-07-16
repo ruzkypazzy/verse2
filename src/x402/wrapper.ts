@@ -56,7 +56,7 @@ function buildFacilitatorClient(): OKXFacilitatorClient {
   const apiKey = process.env.OKX_FACILITATOR_API_KEY;
   const secretKey = process.env.OKX_FACILITATOR_SECRET_KEY;
   const passphrase = process.env.OKX_FACILITATOR_PASSPHRASE;
-  if (!apiKey || !secretKey || !passphrase) {
+  if (!apiKey || !secretKey || !passphrase || apiKey === "DISABLED") {
     throw new Error(
       "OKX_FACILITATOR_API_KEY / OKX_FACILITATOR_SECRET_KEY / OKX_FACILITATOR_PASSPHRASE are required. " +
       "Apply at https://web3.okx.com/onchainos/dev-portal to obtain them."

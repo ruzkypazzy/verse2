@@ -107,7 +107,13 @@ function buildFallbackMiddleware(): RequestHandler {
           amount: String(Math.round(priceUSDT * 1_000_000)),
           payTo: env.receivingWallet,
           maxTimeoutSeconds: 300,
-          extra: { name: "USD\u20ae0", version: "1" },
+          extra: {
+            // EIP-3009 (exact scheme) requires these under extra.eip712
+            eip712: {
+              name: "USD\u20ae0",
+              version: "1",
+            },
+          },
         },
       ],
     };

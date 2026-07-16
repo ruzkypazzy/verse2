@@ -152,6 +152,8 @@ export function x402Middleware(): RequestHandler {
       next();
       return;
     }
+    const sig = req.header("payment-signature") ?? req.header("x-payment");
+    console.log(`[x402] HIT ${req.method} ${req.path} (sig present: ${sig ? sig.length + ' bytes' : 'no'})`);
     const info = build402Challenge(req.path);
     if (!info) {
       next();
@@ -161,6 +163,7 @@ export function x402Middleware(): RequestHandler {
     let headersSent = false;
     const originalStatus = res.status.bind(res);
     res.status = (code: number) => {
+      console.log(`[x402] res.status(${code}) for ${req.method} ${req.path}`);
       if (code >= 500 && !headersSent) {
         // SDK tried to 500 because the facilitator rejected the key.
         // Serve the proper 402 challenge instead.
@@ -172,15 +175,15 @@ export function x402Middleware(): RequestHandler {
     const safeNext: NextFunction = (err) => {
       if (err) {
         // SDK errored — likely the facilitator rejected the API key.
+        console.log(`[x402] SDK next(err) for ${req.method} ${req.path}: ${(err as Error)?.message ?? err}`);
         if (!res.headersSent) {
           send402(res, info.challenge, info.priceUSDT);
         }
         return;
       }
       // SDK accepted the payment, forwarded to route handler.
-      if (!sdkCalled && !res.headersSent) {
-        // The route handler already responded.
-      }
+      console.log(`[x402] SDK accepted payment for ${req.method} ${req.path} — forwarding to route handler`);
+      sdkCalled = true;
     };
     try {
       const result = sdkMiddleware(req, res, safeNext);

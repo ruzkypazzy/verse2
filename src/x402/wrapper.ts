@@ -207,17 +207,20 @@ export function x402Middleware(): RequestHandler {
     const safeNext: NextFunction = (err) => {
       if (err) {
         // SDK errored — likely the facilitator rejected the API key.
+        console.log(`[x402] safeNext(err) for ${req.method} ${req.path}: ${(err as Error)?.message ?? err}`);
         if (!res.headersSent) {
           send402(res, info.challenge, info.priceUSDT);
         }
         return;
       }
       // SDK accepted the payment, forwarded to route handler.
+      console.log(`[x402] safeNext(ok) for ${req.method} ${req.path}`);
       sdkCalled = true;
     };
     try {
       const result = sdkMiddleware(req, res, safeNext);
       if (result && typeof (result as Promise<unknown>).then === "function") {
+        console.log(`[x402] sdkMiddleware returned a Promise for ${req.method} ${req.path}`);
         (result as Promise<unknown>).catch(() => {
           if (!res.headersSent) {
             send402(res, info.challenge, info.priceUSDT);

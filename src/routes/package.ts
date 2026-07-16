@@ -17,7 +17,7 @@ const FILES_WHITELIST = new Set([
   "shooting_schedule.csv",
 ]);
 
-packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: Response) => {
+packageRouter.post("/v1/package", x402PackageGate, async (req: Request, res: Response) => {
   try {
     const body = req.body as Record<string, unknown> | undefined;
     if (!body || typeof body !== "object") {
@@ -67,7 +67,7 @@ packageRouter.get("/v1/jobs/:id", async (req: Request, res: Response) => {
 
 packageRouter.post(
   "/v1/jobs/:id/revise",
-  x402RevisionGate(),
+  x402RevisionGate,
   async (req: Request, res: Response) => {
     const freeText = (req.body as { revision?: string })?.revision;
     if (typeof freeText !== "string" || freeText.length === 0) {

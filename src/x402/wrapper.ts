@@ -137,7 +137,11 @@ export function x402Middleware(): RequestHandler {
       testnet: NETWORK === "eip155:195",
     },
     undefined,
-    false, // don't block startup on facilitator connectivity
+    true, // syncFacilitatorOnStart: must call httpServer.initialize() on first request
+    // to fetch supported kinds from the facilitator. Without this, the SDK has no
+    // cache of which schemes/networks the facilitator supports, and verify() fails
+    // with "Facilitator does not support exact on eip155:196" (the same 402 we'd
+    // get for a bad signature, which is what the OKX reviewer is seeing).
   );
 
   // Wrap the SDK so the unpaid-request test always passes:
@@ -152,8 +156,6 @@ export function x402Middleware(): RequestHandler {
       next();
       return;
     }
-    const sig = req.header("payment-signature") ?? req.header("x-payment");
-    console.log(`[x402] HIT ${req.method} ${req.path} (sig present: ${sig ? sig.length + ' bytes' : 'no'})`);
     const info = build402Challenge(req.path);
     if (!info) {
       next();
@@ -163,7 +165,6 @@ export function x402Middleware(): RequestHandler {
     let headersSent = false;
     const originalStatus = res.status.bind(res);
     res.status = (code: number) => {
-      console.log(`[x402] res.status(${code}) for ${req.method} ${req.path}`);
       if (code >= 500 && !headersSent) {
         // SDK tried to 500 because the facilitator rejected the key.
         // Serve the proper 402 challenge instead.
@@ -175,14 +176,12 @@ export function x402Middleware(): RequestHandler {
     const safeNext: NextFunction = (err) => {
       if (err) {
         // SDK errored — likely the facilitator rejected the API key.
-        console.log(`[x402] SDK next(err) for ${req.method} ${req.path}: ${(err as Error)?.message ?? err}`);
         if (!res.headersSent) {
           send402(res, info.challenge, info.priceUSDT);
         }
         return;
       }
       // SDK accepted the payment, forwarded to route handler.
-      console.log(`[x402] SDK accepted payment for ${req.method} ${req.path} — forwarding to route handler`);
       sdkCalled = true;
     };
     try {

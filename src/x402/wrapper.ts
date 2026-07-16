@@ -107,13 +107,10 @@ function buildFallbackMiddleware(): RequestHandler {
           amount: String(Math.round(priceUSDT * 1_000_000)),
           payTo: env.receivingWallet,
           maxTimeoutSeconds: 300,
-          extra: {
-            // EIP-3009 (exact scheme) requires these under extra.eip712
-            eip712: {
-              name: "USD\u20ae0",
-              version: "1",
-            },
-          },
+          // Per the OKX.AI official example in /onchainos/dev-docs/okxai/howtomcp,
+          // the extra is a flat object with "name" and "version" at the top level
+          // for the USDT0 EIP-712 domain. Not nested under "eip712".
+          extra: { name: "USD\u20ae0", version: "1" },
         },
       ],
     };

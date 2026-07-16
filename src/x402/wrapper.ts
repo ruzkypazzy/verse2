@@ -159,7 +159,32 @@ export function x402Middleware(): RequestHandler {
     [2, new Map([[NETWORK, new Map([["exact", facilitator]])]])],
   ]);
   resourceServer.register(NETWORK, scheme);
-  console.log(`[x402] getSupportedKind(2, ${NETWORK}, exact) = ${(resourceServer as unknown as { getSupportedKind: (v: number, n: string, s: string) => unknown }).getSupportedKind(2, NETWORK, "exact") ? "FOUND" : "undefined"}`);
+
+  // Add a 30s timeout to all facilitator fetch calls to prevent indefinite hangs.
+  const originalVerify = facilitator.verify.bind(facilitator);
+  facilitator.verify = async (...args: unknown[]) => {
+    console.log(`[x402] facilitator.verify() called`);
+    const promise = originalVerify(...(args as Parameters<typeof originalVerify>));
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("facilitator verify timeout after 30s")), 30_000),
+      ),
+    ]);
+  };
+  const originalSettle = facilitator.settle?.bind(facilitator);
+  if (originalSettle) {
+    facilitator.settle = async (...args: unknown[]) => {
+      console.log(`[x402] facilitator.settle() called`);
+      const promise = originalSettle(...(args as Parameters<typeof originalSettle>));
+      return Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("facilitator settle timeout after 30s")), 30_000),
+        ),
+      ]);
+    };
+  }
 
   // Build the HTTP server wrapping our pre-populated ResourceServer, then
   // build the express middleware. `syncFacilitatorOnStart: false` because we

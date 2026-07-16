@@ -134,9 +134,10 @@ export function x402Middleware(): RequestHandler {
   // 1010). We know OKX supports `exact` on eip155:196 from the docs and from
   // the working /verify endpoint, so we can hardcode the supported response.
   const resourceServer = new x402ResourceServer([facilitator]);
-  console.log(`[x402] pre-init resourceServer.supportedResponsesMap.size = ${(resourceServer as unknown as { supportedResponsesMap: Map<unknown, unknown> }).supportedResponsesMap.size}`);
   // Manually populate the supported kinds cache. The expected structure is
   // `supportedResponsesMap[x402Version][network][scheme] = SupportedResponse`.
+  // IMPORTANT: the outer key MUST be the number 2 (matches the constant
+  // x402Version in the SDK), not the string "2" — Map.get() is type-strict.
   const fakeSupportedResponse = {
     kinds: [
       {
@@ -147,18 +148,17 @@ export function x402Middleware(): RequestHandler {
       },
     ],
   };
-  const versionMap = new Map<string, Map<string, Map<string, unknown>>>();
   const networkMap = new Map<string, Map<string, unknown>>();
   const schemeMap = new Map<string, unknown>();
   schemeMap.set("exact", fakeSupportedResponse);
   networkMap.set(NETWORK, schemeMap);
-  versionMap.set("2", networkMap);
+  const versionMap = new Map<number, Map<string, Map<string, unknown>>>();
+  versionMap.set(2, networkMap);
   (resourceServer as unknown as { supportedResponsesMap: typeof versionMap }).supportedResponsesMap = versionMap;
-  (resourceServer as unknown as { facilitatorClientsMap: typeof versionMap }).facilitatorClientsMap = new Map([
-    ["2", new Map([[NETWORK, new Map([["exact", facilitator]])]])],
+  (resourceServer as unknown as { facilitatorClientsMap: Map<number, Map<string, Map<string, unknown>>> }).facilitatorClientsMap = new Map([
+    [2, new Map([[NETWORK, new Map([["exact", facilitator]])]])],
   ]);
   resourceServer.register(NETWORK, scheme);
-  console.log(`[x402] post-init resourceServer.supportedResponsesMap.size = ${(resourceServer as unknown as { supportedResponsesMap: Map<unknown, unknown> }).supportedResponsesMap.size}`);
   console.log(`[x402] getSupportedKind(2, ${NETWORK}, exact) = ${(resourceServer as unknown as { getSupportedKind: (v: number, n: string, s: string) => unknown }).getSupportedKind(2, NETWORK, "exact") ? "FOUND" : "undefined"}`);
 
   // Build the HTTP server wrapping our pre-populated ResourceServer, then
@@ -210,20 +210,17 @@ export function x402Middleware(): RequestHandler {
     const safeNext: NextFunction = (err) => {
       if (err) {
         // SDK errored — likely the facilitator rejected the API key.
-        console.log(`[x402] safeNext(err) for ${req.method} ${req.path}: ${(err as Error)?.message ?? err}`);
         if (!res.headersSent) {
           send402(res, info.challenge, info.priceUSDT);
         }
         return;
       }
       // SDK accepted the payment, forwarded to route handler.
-      console.log(`[x402] safeNext(ok) for ${req.method} ${req.path}`);
       sdkCalled = true;
     };
     try {
       const result = sdkMiddleware(req, res, safeNext);
       if (result && typeof (result as Promise<unknown>).then === "function") {
-        console.log(`[x402] sdkMiddleware returned a Promise for ${req.method} ${req.path}`);
         (result as Promise<unknown>).catch(() => {
           if (!res.headersSent) {
             send402(res, info.challenge, info.priceUSDT);

@@ -134,6 +134,7 @@ export function x402Middleware(): RequestHandler {
   // 1010). We know OKX supports `exact` on eip155:196 from the docs and from
   // the working /verify endpoint, so we can hardcode the supported response.
   const resourceServer = new x402ResourceServer([facilitator]);
+  console.log(`[x402] pre-init resourceServer.supportedResponsesMap.size = ${(resourceServer as unknown as { supportedResponsesMap: Map<unknown, unknown> }).supportedResponsesMap.size}`);
   // Manually populate the supported kinds cache. The expected structure is
   // `supportedResponsesMap[x402Version][network][scheme] = SupportedResponse`.
   const fakeSupportedResponse = {
@@ -157,6 +158,8 @@ export function x402Middleware(): RequestHandler {
     ["2", new Map([[NETWORK, new Map([["exact", facilitator]])]])],
   ]);
   resourceServer.register(NETWORK, scheme);
+  console.log(`[x402] post-init resourceServer.supportedResponsesMap.size = ${(resourceServer as unknown as { supportedResponsesMap: Map<unknown, unknown> }).supportedResponsesMap.size}`);
+  console.log(`[x402] getSupportedKind(2, ${NETWORK}, exact) = ${(resourceServer as unknown as { getSupportedKind: (v: number, n: string, s: string) => unknown }).getSupportedKind(2, NETWORK, "exact") ? "FOUND" : "undefined"}`);
 
   // Build the HTTP server wrapping our pre-populated ResourceServer, then
   // build the express middleware. `syncFacilitatorOnStart: false` because we

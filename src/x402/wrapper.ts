@@ -17,7 +17,7 @@
 // facilitator credentials.
 
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import { paymentMiddlewareFromConfig } from "@okxweb3/x402-express";
+import { paymentMiddlewareFromHTTPServer, x402HTTPResourceServer, x402ResourceServer } from "@okxweb3/x402-express";
 import { ExactEvmScheme } from "@okxweb3/x402-evm/exact/server";
 import { OKXFacilitatorClient } from "@okxweb3/x402-core";
 import { env } from "../config/env.js";
@@ -127,21 +127,52 @@ export function x402Middleware(): RequestHandler {
   const routes = buildRoutes();
   const facilitator = buildFacilitatorClient();
   const scheme = new ExactEvmScheme();
-  const sdkMiddleware = paymentMiddlewareFromConfig(
-    routes,
-    facilitator,
-    [{ network: NETWORK, server: scheme }],
+
+  // Build a ResourceServer with the supported kinds pre-populated. This avoids
+  // calling `getSupported()` on the OKX facilitator (which hangs from Railway's
+  // egress IP because Cloudflare blocks the /api/v6/pay/x402/supported path with
+  // 1010). We know OKX supports `exact` on eip155:196 from the docs and from
+  // the working /verify endpoint, so we can hardcode the supported response.
+  const resourceServer = new x402ResourceServer([facilitator]);
+  // Manually populate the supported kinds cache. The expected structure is
+  // `supportedResponsesMap[x402Version][network][scheme] = SupportedResponse`.
+  const fakeSupportedResponse = {
+    kinds: [
+      {
+        x402Version: 2,
+        scheme: "exact",
+        network: NETWORK,
+        extra: { name: "USD\u20ae0", version: "1" },
+      },
+    ],
+  };
+  const versionMap = new Map<string, Map<string, Map<string, unknown>>>();
+  const networkMap = new Map<string, Map<string, unknown>>();
+  const schemeMap = new Map<string, unknown>();
+  schemeMap.set("exact", fakeSupportedResponse);
+  networkMap.set(NETWORK, schemeMap);
+  versionMap.set("2", networkMap);
+  (resourceServer as unknown as { supportedResponsesMap: typeof versionMap }).supportedResponsesMap = versionMap;
+  (resourceServer as unknown as { facilitatorClientsMap: typeof versionMap }).facilitatorClientsMap = new Map([
+    ["2", new Map([[NETWORK, new Map([["exact", facilitator]])]])],
+  ]);
+  resourceServer.register(NETWORK, scheme);
+
+  // Build the HTTP server wrapping our pre-populated ResourceServer, then
+  // build the express middleware. `syncFacilitatorOnStart: false` because we
+  // already populated the supported-kinds cache; the SDK would otherwise call
+  // getSupported() on the OKX facilitator, which hangs from Railway's egress IP
+  // (Cloudflare 1010 on /api/v6/pay/x402/supported).
+  const httpServer = new x402HTTPResourceServer(resourceServer, routes);
+  const sdkMiddleware = paymentMiddlewareFromHTTPServer(
+    httpServer,
     {
       appName: "VERSE2",
       currentUrl: process.env.PUBLIC_BASE_URL ?? "https://verse2.org",
       testnet: NETWORK === "eip155:195",
     },
     undefined,
-    true, // syncFacilitatorOnStart: must call httpServer.initialize() on first request
-    // to fetch supported kinds from the facilitator. Without this, the SDK has no
-    // cache of which schemes/networks the facilitator supports, and verify() fails
-    // with "Facilitator does not support exact on eip155:196" (the same 402 we'd
-    // get for a bad signature, which is what the OKX reviewer is seeing).
+    false,
   );
 
   // Wrap the SDK so the unpaid-request test always passes:

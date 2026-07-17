@@ -104,7 +104,7 @@ function build402Challenge(reqPath: string): { challenge: object; priceUSDT: num
         amount: String(Math.round(priceUSDT * 1_000_000)),
         payTo: env.receivingWallet,
         maxTimeoutSeconds: 300,
-        extra: { name: "USD\u20ae0", version: "1" },
+        extra: { name: "USD\u20ae0", version: "1", decimals: 6 },
       },
     ],
   };
@@ -149,7 +149,7 @@ export function x402Middleware(): RequestHandler {
         x402Version: 2,
         scheme: "exact",
         network: NETWORK,
-        extra: { name: "USD\u20ae0", version: "1" },
+        extra: { name: "USD\u20ae0", version: "1", decimals: 6 },
       },
     ],
   };
@@ -240,11 +240,24 @@ export function x402Middleware(): RequestHandler {
     let headersSent = false;
     const originalStatus = res.status.bind(res);
     res.status = (code: number) => {
-      if (code >= 500 && !headersSent) {
-        // SDK tried to 500 because the facilitator rejected the key.
-        // Serve the proper 402 challenge instead.
-        headersSent = true;
-        return originalStatus(402);
+      if (!headersSent) {
+        // The SDK generates a 402 challenge that has known spec issues
+        // (e.g. it uses `req.protocol://req.get('host')` which Cloudflare's
+        // TLS termination makes `http://`, and it may set an empty
+        // mimeType). Always intercept the 402 and serve our own spec-clean
+        // challenge. This keeps the OKX validator happy.
+        if (code === 402) {
+          headersSent = true;
+          send402(res, info.challenge, info.priceUSDT);
+          return res;
+        }
+        if (code >= 500) {
+          // SDK tried to 500 because the facilitator rejected the key.
+          // Serve the proper 402 challenge instead.
+          headersSent = true;
+          send402(res, info.challenge, info.priceUSDT);
+          return res;
+        }
       }
       return originalStatus(code);
     };

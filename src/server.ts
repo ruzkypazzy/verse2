@@ -9,13 +9,40 @@ import { healthRouter } from "./routes/health.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { handleMcpRequest, handlePaymentVerify } from "./mcp/http.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.disable("x-powered-by");
-app.use(cors({ origin: true, exposedHeaders: ["PAYMENT-REQUIRED", "X-PAYMENT-RECEIPT"] }));
+app.use(
+  cors({
+    origin: true,
+    exposedHeaders: [
+      "PAYMENT-REQUIRED",
+      "X-PAYMENT-RECEIPT",
+      "WWW-Authenticate",
+      "X-Payment-Required",
+      "X-Payment-Protocol",
+      "X-Payment-Version",
+      "X-Payment-Endpoint",
+    ],
+  }),
+);
+// JSON body parser for most routes. The MCP endpoint also reads JSON
+// so this is fine. We bump the limit because audio_url strings + base64
+// interview payloads can be ~1MB.
 app.use(express.json({ limit: "5mb" }));
+
+// MCP-over-HTTP (A2MCP) endpoint. The OKX.AI marketplace reviewer
+// prompts the agent via this endpoint using standard JSON-RPC 2.0.
+app.post("/mcp", handleMcpRequest);
+
+// Payment verification endpoint. The OKX.AI marketplace calls this
+// after the buyer's wallet signs the 402 challenge, passing the
+// paymentId + proof. We mark the paymentId as used so the same
+// payment can't be replayed.
+app.post("/v1/payment/verify", handlePaymentVerify);
 
 app.use(packageRouter);
 app.use(healthRouter);

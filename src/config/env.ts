@@ -49,6 +49,7 @@ export const env = {
 
   x402PackagePrice: num("X402_PACKAGE_PRICE", 2.0),
   x402RevisionPrice: num("X402_REVISION_PRICE", 0.3),
+  x402Network: (process.env.X402_NETWORK ?? "eip155:196") as "eip155:196" | "eip155:195",
 
   dataDir: process.env.DATA_DIR ?? "./data",
   outputDir: process.env.OUTPUT_DIR ?? "./data/outputs",

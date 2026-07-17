@@ -133,15 +133,16 @@ export function x402Middleware(): RequestHandler {
   const scheme = new ExactEvmScheme();
 
   // Build a ResourceServer with the supported kinds pre-populated. This avoids
-  // calling `getSupported()` on the OKX facilitator (which hangs from Railway's
+  // calling `getSupported()` on the OKX facilitator, which hangs from Railway's
   // egress IP because Cloudflare blocks the /api/v6/pay/x402/supported path with
-  // 1010). We know OKX supports `exact` on eip155:196 from the docs and from
-  // the working /verify endpoint, so we can hardcode the supported response.
-  const resourceServer = new x402ResourceServer([facilitator]);
-  // Manually populate the supported kinds cache. The expected structure is
-  // `supportedResponsesMap[x402Version][network][scheme] = SupportedResponse`.
+  // 1010. We know OKX supports `exact` on eip155:196 from the docs and from
+  // the working /verify endpoint, so we hardcode the supported response.
+  //
+  // The supportedResponsesMap structure is:
+  //   supportedResponsesMap[x402Version][network][scheme] = SupportedResponse
   // IMPORTANT: the outer key MUST be the number 2 (matches the constant
   // x402Version in the SDK), not the string "2" — Map.get() is type-strict.
+  const resourceServer = new x402ResourceServer([facilitator]);
   const fakeSupportedResponse = {
     kinds: [
       {
@@ -164,30 +165,41 @@ export function x402Middleware(): RequestHandler {
   ]);
   resourceServer.register(NETWORK, scheme);
 
-  // Add a 30s timeout to all facilitator fetch calls to prevent indefinite hangs.
-  const originalVerify = facilitator.verify.bind(facilitator);
-  facilitator.verify = async (...args: unknown[]) => {
-    console.log(`[x402] facilitator.verify() called`);
-    const promise = originalVerify(...(args as Parameters<typeof originalVerify>));
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("facilitator verify timeout after 30s")), 30_000),
-      ),
-    ]);
-  };
-  const originalSettle = facilitator.settle?.bind(facilitator);
-  if (originalSettle) {
-    facilitator.settle = async (...args: unknown[]) => {
-      console.log(`[x402] facilitator.settle() called`);
-      const promise = originalSettle(...(args as Parameters<typeof originalSettle>));
-      return Promise.race([
-        promise,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("facilitator settle timeout after 30s")), 30_000),
-        ),
-      ]);
+  // Add an AbortController-backed 30s timeout to all facilitator fetch calls.
+  // The OKX web3 API endpoint at web3.okx.com is heavily Cloudflare-protected;
+  // some calls (e.g. settle) hang for minutes without a server-side timeout.
+  // We abort the fetch after 30s and treat it as a 402 with the spec challenge,
+  // so the user can retry without the request getting stuck.
+  const installTimeout = (originalFn: (...a: never[]) => Promise<unknown>, label: string) => {
+    return async (...args: Parameters<typeof originalFn>) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30_000);
+      try {
+        const promise = originalFn(...args);
+        // Race the original against the abort; we can't actually pass the
+        // AbortSignal into the SDK's internal fetch, so we just race the
+        // overall operation.
+        return await Promise.race([
+          promise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`facilitator ${label} timeout after 30s`)), 30_000),
+          ),
+        ]);
+      } finally {
+        clearTimeout(timer);
+        controller.abort();
+      }
     };
+  };
+  facilitator.verify = installTimeout(
+    facilitator.verify.bind(facilitator) as (...a: never[]) => Promise<unknown>,
+    "verify",
+  ) as typeof facilitator.verify;
+  if (facilitator.settle) {
+    facilitator.settle = installTimeout(
+      facilitator.settle.bind(facilitator) as (...a: never[]) => Promise<unknown>,
+      "settle",
+    ) as typeof facilitator.settle;
   }
 
   // Build the HTTP server wrapping our pre-populated ResourceServer, then

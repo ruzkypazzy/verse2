@@ -67,7 +67,11 @@ function buildFacilitatorClient(): OKXFacilitatorClient {
     secretKey,
     passphrase,
     baseUrl: process.env.OKX_FACILITATOR_BASE_URL ?? "https://web3.okx.com",
-    syncSettle: true,
+    // async settle (fire-and-forget) — syncSettle waits for on-chain tx
+    // confirmation which can take 15-30s and may hit Cloudflare rate limits
+    // from Railway. Async returns the tx hash immediately after the user-side
+    // signature is verified; the on-chain settlement happens in the background.
+    syncSettle: false,
   });
 }
 

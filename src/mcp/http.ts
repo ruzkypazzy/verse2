@@ -28,6 +28,7 @@ import type { Request, Response } from "express";
 import { handleMcpHttpRequest } from "./server.js";
 
 import { runPackage } from "../services/orchestrator.js";
+import { runLitePackage } from "../services/lite.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
@@ -193,17 +194,30 @@ async function handleToolCall(
     });
     return;
   }
+  // The OKX.AI marketplace has a 60-90s task timeout, and the full
+  // LLM pipeline (librosa audio analysis ~90s + LLM ~30-60s + outputs)
+  // routinely exceeds that. For the /mcp endpoint we therefore default
+  // to a "lite" path that returns a single-concept ballpark in
+  // 2-5s without the slow audio analysis or LLM call. Callers can
+  // opt into the full LLM treatment by setting { mode: "full" }.
+  const mode = ((args as Record<string, unknown>).mode as string) === "full" ? "full" : "lite";
   try {
-    const result = await runPackage({
-      audio_url: args.audio_url,
-      interview: args.interview ?? {},
-      selected_concept_index: args.selected_concept_index,
-      budget_cap:
-        typeof args.interview?.budget_cap === "number"
-          ? (args.interview.budget_cap as number)
-          : undefined,
-      optimize: true,
-    });
+    const result =
+      mode === "full"
+        ? await runPackage({
+            audio_url: args.audio_url,
+            interview: args.interview ?? {},
+            selected_concept_index: args.selected_concept_index,
+            budget_cap:
+              typeof args.interview?.budget_cap === "number"
+                ? (args.interview.budget_cap as number)
+                : undefined,
+            optimize: true,
+          })
+        : await runLitePackage({
+            audio_url: args.audio_url,
+            interview: args.interview ?? {},
+          });
     res.status(200).json({
       jsonrpc: "2.0",
       id: body.id,

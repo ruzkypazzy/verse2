@@ -9,7 +9,7 @@ import { healthRouter } from "./routes/health.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { handleMcpRequest, handlePaymentVerify } from "./mcp/http.js";
+import { handleMcpRequest } from "./mcp/http.js";
 import { x402PackageGate } from "./x402/wrapper.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,11 +23,6 @@ app.use(
     exposedHeaders: [
       "PAYMENT-REQUIRED",
       "X-PAYMENT-RECEIPT",
-      "WWW-Authenticate",
-      "X-Payment-Required",
-      "X-Payment-Protocol",
-      "X-Payment-Version",
-      "X-Payment-Endpoint",
     ],
   }),
 );
@@ -73,12 +68,6 @@ app.use(express.json({ limit: "5mb" }));
   );
 
   app.post("/mcp", x402PackageGate(), handleMcpRequest);
-
-// Payment verification endpoint. The OKX.AI marketplace calls this
-// after the buyer's wallet signs the 402 challenge, passing the
-// paymentId + proof. We mark the paymentId as used so the same
-// payment can't be replayed.
-app.post("/v1/payment/verify", handlePaymentVerify);
 
 app.use(packageRouter);
 app.use(healthRouter);

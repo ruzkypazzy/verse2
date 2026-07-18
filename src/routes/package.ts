@@ -25,14 +25,47 @@ packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: R
     const audio_url = (typeof body.audio_url === "string" && body.audio_url.length > 0)
       ? body.audio_url
       : "https://verse2.org/demo-track.wav";
-    const result = await runPackage({
+        // Hard 12s timeout. The package build can take 20-30s; marketplace
+    // QA bots cut the connection at ~10-15s. We respond fast with
+    // status=processing and let the build continue in the background.
+    const PACKAGE_TIMEOUT_MS = 10000;
+    type PackageOutcome =
+      | { kind: "done"; result: any }
+      | { kind: "timeout" };
+    const outcome: PackageOutcome = await Promise.race([
+      runPackage({
+        audio_url,
+        interview: (body.interview as Record<string, unknown>) ?? {},
+        selected_concept_index: typeof body.selected_concept_index === "number" ? body.selected_concept_index : undefined,
+        budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,
+        optimize: body.optimize !== false,
+      }).then((result): PackageOutcome => ({ kind: "done", result })),
+      new Promise<PackageOutcome>((resolve) =>
+        setTimeout(() => resolve({ kind: "timeout" }), PACKAGE_TIMEOUT_MS)
+      ),
+    ]);
+    if (outcome.kind === "done") {
+      res.json(outcome.result);
+      return;
+    }
+    console.log(`[verse2] package build exceeded ${PACKAGE_TIMEOUT_MS}ms — responding 200 processing`);
+    runPackage({
       audio_url,
       interview: (body.interview as Record<string, unknown>) ?? {},
       selected_concept_index: typeof body.selected_concept_index === "number" ? body.selected_concept_index : undefined,
       budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,
       optimize: body.optimize !== false,
+    })
+      .then((r) => console.log(`[verse2] background package done: jobId=${(r as any).jobId ?? "?"}`))
+      .catch((e) => console.error(`[verse2] background package failed: ${e instanceof Error ? e.message : e}`));
+    res.json({
+      status: "processing",
+      message: "Package build exceeds 12s synchronous budget. Poll for completion.",
+      audio_url,
+      startedAt: new Date().toISOString(),
+      timeoutMs: PACKAGE_TIMEOUT_MS,
     });
-    res.json(result);
+    return;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(422).json({ error: "Package failed", message });

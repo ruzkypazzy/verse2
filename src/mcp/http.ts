@@ -50,6 +50,7 @@ interface PaymentChallenge {
   // x402 v2 envelope (base64-encoded into the PAYMENT-REQUIRED header)
   x402: {
     x402Version: 2;
+    error: string;
     resource: { url: string; description: string; mimeType: string };
     accepts: Array<{
       scheme: string;
@@ -58,7 +59,7 @@ interface PaymentChallenge {
       amount: string;
       payTo: string;
       maxTimeoutSeconds: number;
-      extra: { name: string; version: string };
+      extra: { name: string; version: string; decimals: number };
     }>;
   };
 }
@@ -78,6 +79,7 @@ function buildPaymentChallenge(
   const amount = String(Math.round(priceUsdt * 1_000_000));
   const x402 = {
     x402Version: 2 as const,
+    error: "payment_required",
     resource,
     accepts: [
       {
@@ -87,7 +89,7 @@ function buildPaymentChallenge(
         amount,
         payTo: env.receivingWallet,
         maxTimeoutSeconds: 300,
-        extra: { name: "USD\u20ae0", version: "1" },
+        extra: { name: "USD\u20ae0", version: "1", decimals: 6 },
       },
     ],
   };
@@ -117,8 +119,11 @@ function sendPaymentChallenge(res: Response, challenge: PaymentChallenge): void 
   );
   res.setHeader("PAYMENT-REQUIRED", challengeHeader);
   res.setHeader("Access-Control-Expose-Headers", "PAYMENT-REQUIRED,X-PAYMENT-RECEIPT,WWW-Authenticate,X-Payment-Required");
+  // Body: x402 v2 PaymentRequired fields at top level (so validators that
+  // parse the body see the same challenge as those decoding the header),
+  // plus the OKX app-style challenge envelope for marketplace clients.
   res.status(402).json({
-    error: "payment_required",
+    ...challenge.x402,
     message: `VERSE2 requires x402 payment. Pay ${challenge.price} USDT0 to ${challenge.receiver} to receive the music video package.`,
     challenge,
     accepted_schemes: ["exact", "session"],
@@ -245,6 +250,39 @@ async function handleToolCall(
   }
 }
 
+/**
+ * GET /mcp. Real MCP clients GET this path only to open an SSE stream,
+ * which we don't support — the MCP Streamable HTTP spec says to answer
+ * 405 in that case. Anything else (availability probes, browsers) gets
+ * a 200 JSON service descriptor so the endpoint never looks "down".
+ */
+export function handleMcpGet(req: Request, res: Response): void {
+  if ((req.header("accept") ?? "").includes("text/event-stream")) {
+    res.setHeader("Allow", "POST");
+    res.status(405).json({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32000, message: "SSE streams are not supported; POST JSON-RPC 2.0 messages to this endpoint" },
+    });
+    return;
+  }
+  res.status(200).json({
+    service: "verse2",
+    transport: "mcp-streamable-http",
+    protocol: "JSON-RPC 2.0 over POST",
+    payment: {
+      protocol: "x402",
+      x402Version: 2,
+      network: env.x402Network,
+      currency: "USDT0",
+      price_per_call: env.x402PackagePrice,
+    },
+    free_methods: ["initialize", "tools/list", "ping"],
+    paid_methods: ["tools/call"],
+    hint: "POST a JSON-RPC 2.0 request to this URL. Unpaid tools/call returns a standard x402 402 challenge.",
+  });
+}
+
 export async function handleMcpRequest(req: Request, res: Response): Promise<void> {
   const body = (req.body ?? {}) as JsonRpcRequest;
 
@@ -258,6 +296,13 @@ export async function handleMcpRequest(req: Request, res: Response): Promise<voi
   }
 
   logger.info({ method: body.method, id: body.id }, "MCP HTTP request");
+
+  // JSON-RPC notifications (no id — e.g. notifications/initialized) get
+  // 202 Accepted with no body, per the MCP Streamable HTTP transport spec.
+  if (body.id === undefined && body.method.startsWith("notifications/")) {
+    res.status(202).end();
+    return;
+  }
 
   // Free flow: handshake (initialize) and enumeration (tools/list)
   if (body.method === "initialize" || body.method === "tools/list") {

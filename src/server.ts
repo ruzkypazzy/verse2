@@ -9,7 +9,7 @@ import { healthRouter } from "./routes/health.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { handleMcpRequest, handlePaymentVerify } from "./mcp/http.js";
+import { handleMcpRequest, handleMcpGet, handlePaymentVerify } from "./mcp/http.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +37,7 @@ app.use(express.json({ limit: "5mb" }));
 // MCP-over-HTTP (A2MCP) endpoint. The OKX.AI marketplace reviewer
 // prompts the agent via this endpoint using standard JSON-RPC 2.0.
 app.post("/mcp", handleMcpRequest);
+app.get("/mcp", handleMcpGet);
 
 // Payment verification endpoint. The OKX.AI marketplace calls this
 // after the buyer's wallet signs the 402 challenge, passing the

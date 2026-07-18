@@ -1,7 +1,7 @@
 // /v1 endpoints. The main entry is /v1/package which is gated by x402.
 
 import { Router, type Request, type Response } from "express";
-import { x402PackageGate, x402RevisionGate } from "../x402/wrapper.js";
+import { x402PackageGate, x402RevisionGate, x402ChallengeHandler } from "../x402/wrapper.js";
 import { runPackage, runRevision } from "../services/orchestrator.js";
 import { getJob } from "../db/jobs.js";
 import { join, basename } from "node:path";
@@ -16,6 +16,12 @@ const FILES_WHITELIST = new Set([
   "shot_list.csv",
   "shooting_schedule.csv",
 ]);
+
+// x402 method coverage: an unpaid GET/HEAD probe of a paid resource must
+// receive the standard 402 challenge, not a 404. The OKX.AI validator
+// probes the registered endpoint URL directly.
+packageRouter.get("/v1/package", x402ChallengeHandler());
+packageRouter.get("/v1/jobs/:id/revise", x402ChallengeHandler());
 
 packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: Response) => {
   try {

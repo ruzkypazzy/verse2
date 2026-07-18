@@ -52,15 +52,22 @@ function buildRoutes() {
   };
 }
 
-function buildFacilitatorClient(): OKXFacilitatorClient {
+function buildFacilitatorClient(): OKXFacilitatorClient | null {
   const apiKey = process.env.OKX_FACILITATOR_API_KEY;
   const secretKey = process.env.OKX_FACILITATOR_SECRET_KEY;
   const passphrase = process.env.OKX_FACILITATOR_PASSPHRASE;
   if (!apiKey || !secretKey || !passphrase) {
-    throw new Error(
-      "OKX_FACILITATOR_API_KEY / OKX_FACILITATOR_SECRET_KEY / OKX_FACILITATOR_PASSPHRASE are required. " +
-      "Apply at https://web3.okx.com/onchainos/dev-portal to obtain them."
+    // Challenge-only mode: without facilitator credentials we can still
+    // serve the spec 402 challenge on unpaid requests (the OKX validator
+    // only needs that), we just can't verify payments server-side. Crashing
+    // here would take the whole service down and fail the availability check.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[x402] OKX facilitator credentials missing — running in challenge-only mode. " +
+      "Unpaid requests get the standard 402 challenge; payment verification is disabled. " +
+      "Set OKX_FACILITATOR_API_KEY / OKX_FACILITATOR_SECRET_KEY / OKX_FACILITATOR_PASSPHRASE."
     );
+    return null;
   }
   return new OKXFacilitatorClient({
     apiKey,
@@ -91,6 +98,7 @@ function build402Challenge(reqPath: string): { challenge: object; priceUSDT: num
   }
   const challenge = {
     x402Version: 2,
+    error: "payment_required",
     resource: {
       url: `${process.env.PUBLIC_BASE_URL ?? "https://verse2.org"}${reqPath}`,
       description,
@@ -113,11 +121,36 @@ function build402Challenge(reqPath: string): { challenge: object; priceUSDT: num
 
 function send402(res: Response, challenge: object, priceUSDT: number): void {
   res.setHeader("PAYMENT-REQUIRED", Buffer.from(JSON.stringify(challenge)).toString("base64"));
+  // Body: the x402 v2 PaymentRequired object itself, top-level, so
+  // validators that parse the body (v1-style) see the same challenge as
+  // validators that decode the PAYMENT-REQUIRED header.
   res.status(402).json({
-    error: "Payment Required",
+    ...challenge,
     message: `x402 challenge: pay ${priceUSDT} USDT0 to ${env.receivingWallet}`,
-    challenge,
   });
+}
+
+// Standalone 402-challenge handler for method probes (GET/HEAD) on paid
+// resources. The x402 spec requires any unpaid request to a paid resource
+// to receive a 402 challenge \u2014 a 404 on GET fails the OKX validator.
+export function x402ChallengeHandler(): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const info = build402Challenge(req.path);
+    if (!info) {
+      next();
+      return;
+    }
+    send402(res, info.challenge, info.priceUSDT);
+  };
+}
+
+// Demo bypass: only honored when X402_DEMO_BYPASS_TOKEN is explicitly set
+// in the environment and the request presents the exact token. Previously
+// this accepted the hardcoded string "demo-bypass", which let anyone who
+// read the public repo skip payment entirely.
+function demoBypassAllowed(req: Request): boolean {
+  const token = process.env.X402_DEMO_BYPASS_TOKEN;
+  return Boolean(token) && req.header("x-payment") === token;
 }
 
 let cachedMiddleware: RequestHandler | undefined;
@@ -130,6 +163,28 @@ export function x402Middleware(): RequestHandler {
   }
   const routes = buildRoutes();
   const facilitator = buildFacilitatorClient();
+
+  // Challenge-only mode: no facilitator credentials. Every unpaid (i.e.
+  // every) request to a gated route gets the spec 402 challenge. This keeps
+  // the service up and x402-conformant even when the deploy platform drops
+  // the facilitator env vars.
+  if (!facilitator) {
+    cachedMiddleware = (req: Request, res: Response, next: NextFunction) => {
+      if (demoBypassAllowed(req)) {
+        next();
+        return;
+      }
+      const info = build402Challenge(req.path);
+      if (!info) {
+        next();
+        return;
+      }
+      send402(res, info.challenge, info.priceUSDT);
+    };
+    cachedRoutesKey = routesKey;
+    return cachedMiddleware;
+  }
+
   const scheme = new ExactEvmScheme();
 
   // Build a ResourceServer with the supported kinds pre-populated. This avoids
@@ -227,7 +282,7 @@ export function x402Middleware(): RequestHandler {
   //   the OKX facilitator's /verify endpoint; that succeeds (status 200)
   //   only if the facilitator accepts the API key.
   cachedMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    if (req.header("x-payment") === "demo-bypass") {
+    if (demoBypassAllowed(req)) {
       next();
       return;
     }

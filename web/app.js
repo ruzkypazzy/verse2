@@ -78,9 +78,14 @@ $("#banner-use-demo")?.addEventListener("click", () => {
 });
 
 // "Use marketplace" in the banner — open the OKX.AI marketplace for VERSE2
-// Direct agent page (works once VERSE2 is listed in the marketplace).
+// Direct agent page if listed, else fall back to marketplace search.
 $("#banner-use-marketplace")?.addEventListener("click", () => {
-  window.open("https://www.okx.ai/agents/5212", "_blank", "noopener");
+  fetch("https://www.okx.ai/agents/5212", { method: "HEAD" })
+    .then((r) => {
+      const url = r.ok ? "https://www.okx.ai/agents/5212" : "https://www.okx.ai/agents";
+      window.open(url, "_blank", "noopener");
+    })
+    .catch(() => window.open("https://www.okx.ai/agents", "_blank", "noopener"));
 });
 
 // "Try the demo track for free" link in the step-1 form

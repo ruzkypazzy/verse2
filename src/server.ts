@@ -10,11 +10,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleMcpRequest, handlePaymentVerify } from "./mcp/http.js";
+import { x402PackageGate } from "./x402/wrapper.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", 1); // behind nginx - allows req.protocol to be https
 app.use(
   cors({
     origin: true,
@@ -36,7 +38,41 @@ app.use(express.json({ limit: "5mb" }));
 
 // MCP-over-HTTP (A2MCP) endpoint. The OKX.AI marketplace reviewer
 // prompts the agent via this endpoint using standard JSON-RPC 2.0.
-app.post("/mcp", handleMcpRequest);
+  // A2A / Agent Card discovery endpoint. Per the latest A2A spec,
+  // served at /.well-known/agent.json.
+  app.get("/.well-known/agent.json", (_req, res) => {
+    res.json({
+      name: "VERSE2",
+      description: "Autonomous AI music video creative director.",
+      url: env.publicBaseUrl,
+      version: "1.0.0",
+      provider: { organization: "ruzkypazzy", url: "https://github.com/ruzkypazzy/verse2" },
+      capabilities: { streaming: false, pushNotifications: false, stateTransition: false },
+      authentication: { schemes: ["x402"], x402Version: 2, network: env.x402Network, asset: "0x779ded0c9e1022225f8e0630b35a9b54be713736", payTo: env.receivingWallet, facilitator: "https://web3.okx.com" },
+      defaultInputModes: ["application/json"],
+      defaultOutputModes: ["application/json", "application/pdf", "text/html"],
+      skills: [
+        { id: "create_music_video_package", name: "create_music_video_package", description: "Generate a music video pre-production package.", tags: ["video", "music", "creative"], pricing: { amount: String(Math.round(env.x402PackagePrice * 1_000_000)), asset: "0x779ded0c9e1022225f8e0630b35a9b54be713736", network: env.x402Network, decimals: 6 } },
+        { id: "revise_music_video_package", name: "revise_music_video_package", description: "Revise a music video package.", tags: ["video", "music", "revision"], pricing: { amount: String(Math.round(env.x402RevisionPrice * 1_000_000)), asset: "0x779ded0c9e1022225f8e0630b35a9b54be713736", network: env.x402Network, decimals: 6 } }
+      ]
+    });
+  });
+  app.get("/agent-card", (_req, res) => res.redirect(301, "/.well-known/agent.json"));
+
+  // Health + readiness endpoints
+  app.get("/ready", (_req, res) => res.json({ ok: true, ts: Date.now() }));
+  app.get("/health", (_req, res) =>
+    res.json({
+      status: "ok",
+      agent: "VERSE2",
+      payments: "live",
+      network: env.x402Network,
+      facilitator: "OKX Payment SDK",
+      x402Version: 2,
+    }),
+  );
+
+  app.post("/mcp", x402PackageGate(), handleMcpRequest);
 
 // Payment verification endpoint. The OKX.AI marketplace calls this
 // after the buyer's wallet signs the 402 challenge, passing the

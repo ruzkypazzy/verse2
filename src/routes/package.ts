@@ -42,6 +42,13 @@ packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: R
   }
 });
 
+packageRouter.get("/v1/package", x402PackageGate(), async (_req: Request, res: Response) => {
+  // GET /v1/package is not supported. The x402PackageGate middleware
+  // will already have returned a 402 challenge for unpaid requests.
+  // For paid requests, this returns 405 to indicate the method is wrong.
+  res.status(405).json({ error: "Method Not Allowed", message: "Use POST /v1/package with a JSON body" });
+});
+
 packageRouter.get("/v1/jobs/:id", async (req: Request, res: Response) => {
   const job = getJob(req.params.id);
   if (!job) {

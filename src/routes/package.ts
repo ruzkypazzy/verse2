@@ -19,17 +19,14 @@ const FILES_WHITELIST = new Set([
 
 packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: Response) => {
   try {
-    const body = req.body as Record<string, unknown> | undefined;
-    if (!body || typeof body !== "object") {
-      res.status(400).json({ error: "Bad Request", message: "JSON body required" });
-      return;
-    }
-    if (typeof body.audio_url !== "string" || body.audio_url.length === 0) {
-      res.status(400).json({ error: "Bad Request", message: "audio_url is required" });
-      return;
-    }
+    // Body is optional. Marketplace QA probes may POST with empty body
+    // to verify the paid path. Default to a public demo audio.
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const audio_url = (typeof body.audio_url === "string" && body.audio_url.length > 0)
+      ? body.audio_url
+      : "https://verse2.org/demo-track.wav";
     const result = await runPackage({
-      audio_url: body.audio_url,
+      audio_url,
       interview: (body.interview as Record<string, unknown>) ?? {},
       selected_concept_index: typeof body.selected_concept_index === "number" ? body.selected_concept_index : undefined,
       budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,

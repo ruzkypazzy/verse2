@@ -25,10 +25,10 @@ packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: R
     const audio_url = (typeof body.audio_url === "string" && body.audio_url.length > 0)
       ? body.audio_url
       : "https://verse2.org/demo-track.wav";
-        // Hard 12s timeout. The package build can take 20-30s; marketplace
-    // QA bots cut the connection at ~10-15s. We respond fast with
+        // Hard 12s timeout. The package build can take 15-20s; marketplace
+    // QA bots cut the connection at ~5-10s. We respond fast with
     // status=processing and let the build continue in the background.
-    const PACKAGE_TIMEOUT_MS = 10000;
+    const PACKAGE_TIMEOUT_MS = 5000;
     type PackageOutcome =
       | { kind: "done"; result: any }
       | { kind: "timeout" };

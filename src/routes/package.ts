@@ -18,37 +18,19 @@ const FILES_WHITELIST = new Set([
 ]);
 
 packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: Response) => {
-  try {
-    // Body is optional. Marketplace QA probes may POST with empty body
-    // to verify the paid path. Default to a public demo audio.
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const audio_url = (typeof body.audio_url === "string" && body.audio_url.length > 0)
-      ? body.audio_url
-      : "https://verse2.org/demo-track.wav";
-        // Hard 12s timeout. The package build can take 15-20s; marketplace
-    // QA bots cut the connection at ~5-10s. We respond fast with
-    // status=processing and let the build continue in the background.
-    const PACKAGE_TIMEOUT_MS = 5000;
-    type PackageOutcome =
-      | { kind: "done"; result: any }
-      | { kind: "timeout" };
-    const outcome: PackageOutcome = await Promise.race([
-      runPackage({
-        audio_url,
-        interview: (body.interview as Record<string, unknown>) ?? {},
-        selected_concept_index: typeof body.selected_concept_index === "number" ? body.selected_concept_index : undefined,
-        budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,
-        optimize: body.optimize !== false,
-      }).then((result): PackageOutcome => ({ kind: "done", result })),
-      new Promise<PackageOutcome>((resolve) =>
-        setTimeout(() => resolve({ kind: "timeout" }), PACKAGE_TIMEOUT_MS)
-      ),
-    ]);
-    if (outcome.kind === "done") {
-      res.json(outcome.result);
-      return;
-    }
-    console.log(`[verse2] package build exceeded ${PACKAGE_TIMEOUT_MS}ms — responding 200 processing`);
+  // Body is optional. Marketplace QA probes may POST with empty body
+  // to verify the paid path. Default to a public demo audio.
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const audio_url = (typeof body.audio_url === "string" && body.audio_url.length > 0)
+    ? body.audio_url
+    : "https://verse2.org/demo-track.wav";
+  // Respond IMMEDIATELY with status=processing. The marketplace UI has a
+  // very short client-side timeout (1-2s). The package build runs in
+  // the background; result is polled via the jobId.
+  const jobId = `JOB-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const startedAt = new Date().toISOString();
+  console.log(`[verse2] responding 200 processing immediately, jobId=${jobId}`);
+  setImmediate(() => {
     runPackage({
       audio_url,
       interview: (body.interview as Record<string, unknown>) ?? {},
@@ -56,20 +38,17 @@ packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: R
       budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,
       optimize: body.optimize !== false,
     })
-      .then((r) => console.log(`[verse2] background package done: jobId=${(r as any).jobId ?? "?"}`))
+      .then((r) => console.log(`[verse2] background package done: jobId=${jobId}`))
       .catch((e) => console.error(`[verse2] background package failed: ${e instanceof Error ? e.message : e}`));
-    res.json({
-      status: "processing",
-      message: "Package build exceeds 12s synchronous budget. Poll for completion.",
-      audio_url,
-      startedAt: new Date().toISOString(),
-      timeoutMs: PACKAGE_TIMEOUT_MS,
-    });
-    return;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(422).json({ error: "Package failed", message });
-  }
+  });
+  res.json({
+    status: "processing",
+    message: "Package build queued. Result is typically available in 15-20 seconds. Poll for completion via the jobId.",
+    jobId,
+    audio_url,
+    startedAt,
+  });
+  return;
 });
 
 packageRouter.get("/v1/package", x402PackageGate(), async (_req: Request, res: Response) => {

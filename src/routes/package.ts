@@ -37,16 +37,23 @@ packageRouter.post("/v1/package", x402PackageGate(), async (req: Request, res: R
       selected_concept_index: typeof body.selected_concept_index === "number" ? body.selected_concept_index : undefined,
       budget_cap: typeof body.budget_cap === "number" ? body.budget_cap : undefined,
       optimize: body.optimize !== false,
-    })
+    }, jobId)  // pass the synthetic jobId so the DB + files use the same ID
       .then((r) => console.log(`[verse2] background package done: jobId=${jobId}`))
       .catch((e) => console.error(`[verse2] background package failed: ${e instanceof Error ? e.message : e}`));
   });
   res.json({
     status: "processing",
-    message: "Package build queued. Result is typically available in 15-20 seconds. Poll for completion via the jobId.",
+    message: "Package build queued. Poll GET /v1/jobs/:id for status. When complete, GET /v1/jobs/:id/files/treatment.{html,pdf} and /shot_list.csv contain the deliverables. The package typically completes in 30-60 seconds.",
     jobId,
     audio_url,
     startedAt,
+    statusUrl: `${env.publicBaseUrl}/v1/jobs/${jobId}`,
+    files: {
+      treatment_html: `${env.publicBaseUrl}/v1/jobs/${jobId}/files/treatment.html`,
+      treatment_pdf: `${env.publicBaseUrl}/v1/jobs/${jobId}/files/treatment.pdf`,
+      shot_list: `${env.publicBaseUrl}/v1/jobs/${jobId}/files/shot_list.csv`,
+      shooting_schedule: `${env.publicBaseUrl}/v1/jobs/${jobId}/files/shooting_schedule.csv`,
+    },
   });
   return;
 });

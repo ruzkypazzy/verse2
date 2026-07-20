@@ -33,8 +33,8 @@ import {
   type PackageResult,
 } from "../types/index.js";
 
-export async function runPackage(req: PackageRequest): Promise<PackageResult> {
-  const jobId = uuidv4();
+export async function runPackage(req: PackageRequest, providedJobId?: string): Promise<PackageResult> {
+  const jobId = providedJobId ?? `JOB-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   createJob(jobId);
 
   try {

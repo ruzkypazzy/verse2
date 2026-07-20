@@ -55,12 +55,18 @@ async function handleToolCall(
       },
     };
   }
+
+  // Respond INSTANTLY (<1s) with status=processing. The marketplace UI
+  // has a very short timeout (~5-10s). The package runs in the background.
+  const jobId = `JOB-${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const startedAt = new Date().toISOString();
   const mode = (args as Record<string, unknown>).mode === "full" ? "full" : "lite";
-  try {
-    const result =
+
+  setImmediate(() => {
+    const promise =
       mode === "full"
-        ? await runPackage({
-            audio_url: args.audio_url,
+        ? runPackage({
+            audio_url: args.audio_url!,
             interview: args.interview ?? {},
             selected_concept_index: args.selected_concept_index,
             budget_cap:
@@ -69,36 +75,44 @@ async function handleToolCall(
                 : undefined,
             optimize: true,
           })
-        : await runLitePackage({
-            audio_url: args.audio_url,
+        : runLitePackage({
+            audio_url: args.audio_url!,
             interview: args.interview ?? {},
           });
-    return {
-      status: 200,
-      payload: {
-        jsonrpc: "2.0",
-        id: body.id,
-        result: {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        },
+    promise
+      .then((r) => {
+        logger.info({ jobId, mode, result: r ? "ok" : "empty" }, "background package done");
+      })
+      .catch((e) => {
+        logger.error({ jobId, mode, err: e instanceof Error ? e.message : e }, "background package failed");
+      });
+  });
+
+  return {
+    status: 200,
+    payload: {
+      jsonrpc: "2.0",
+      id: body.id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                status: "processing",
+                message: "Package build queued. Result is typically available in 15-20 seconds. Poll for completion via the jobId.",
+                jobId,
+                audio_url: args.audio_url,
+                startedAt,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       },
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return {
-      status: 200,
-      payload: {
-        jsonrpc: "2.0",
-        id: body.id,
-        result: {
-          content: [
-            { type: "text", text: JSON.stringify({ error: message, proceed: false }) },
-          ],
-          isError: true,
-        },
-      },
-    };
-  }
+    },
+  };
 }
 
 /**

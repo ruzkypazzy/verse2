@@ -67,7 +67,10 @@ app.use(express.json({ limit: "5mb" }));
     }),
   );
 
-  app.post("/mcp", x402PackageGate(), handleMcpRequest);
+  // A2MCP transport endpoint — FREE per OKX spec. The marketplace wraps
+  // /mcp in its own x402 layer for billing. Direct pay-per-call users go
+  // to POST /v1/package (gated by x402PackageGate).
+  app.post("/mcp", handleMcpRequest);
 
 app.use(packageRouter);
 app.use(healthRouter);

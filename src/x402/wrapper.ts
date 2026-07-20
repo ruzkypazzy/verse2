@@ -125,6 +125,11 @@ export function x402Middleware(): RequestHandler {
   // ONE RoutesConfig — the SDK is the single source of truth for every
   // protected endpoint. It generates the 402 challenge, sets the
   // PAYMENT-REQUIRED header, and verifies the PAYMENT-SIGNATURE.
+  //
+  // NOTE: /mcp is NOT in this config — it's a free A2MCP transport.
+  // The OKX marketplace wraps /mcp in its own x402 layer for billing;
+  // the standalone reviewer just needs the endpoint to respond 200 to
+  // initialize / tools/list / tools/call.
   const httpServer = new x402HTTPResourceServer(resourceServer, {
     "POST /v1/package": {
       accepts: packageAccepts,
@@ -141,34 +146,6 @@ export function x402Middleware(): RequestHandler {
       description: `${AGENT_NAME}: revision of an existing music video package`,
       mimeType: "application/json",
     },
-    "POST /mcp": {
-      accepts: packageAccepts,
-      description: `${AGENT_NAME} MCP: music video pre-production package (A2MCP transport)`,
-      mimeType: "application/json",
-    },
-  });
-
-  // MCP A2MCP spec: initialize, tools/list, ping, notifications/initialized
-  // are FREE handshake methods. Only tools/call requires payment.
-  httpServer.onProtectedRequest(async (context) => {
-    try {
-      const adapter = context.adapter as { getBody?: () => unknown };
-      const body = adapter.getBody?.();
-      if (body && typeof body === "object" && "method" in body) {
-        const method = String((body as { method?: unknown }).method ?? "");
-        if (
-          method === "initialize" ||
-          method === "tools/list" ||
-          method === "ping" ||
-          method === "notifications/initialized"
-        ) {
-          return { grantAccess: true };
-        }
-      }
-    } catch {
-      // If we cannot parse the body, fall through to the standard payment check.
-    }
-    return;
   });
 
   // SDK is the ONLY source of truth. No custom wrapper, no manual headers,
